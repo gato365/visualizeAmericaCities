@@ -98,7 +98,7 @@ server <- function(input, output) {
                            cache_table = TRUE)
     
     return(list(tmp_state = tmp_state,tmp_county = tmp_county,
-                tmp_race = tmp_race, tmp_year = tmp_year))#, tmp_sf_file = tmp_sf_file))
+                tmp_race = tmp_race, tmp_year = tmp_year, tmp_sf_file = tmp_sf_file))
     
     
     
