@@ -38,8 +38,9 @@
  
 ## 2a. Data Wrangling:
 
-0. You will *select* one of the cities 
-1. You will then *Extract* data from Census via R's API OR Python's API OR directly from Census  website (most likely not going to happen)
+0. [potentially] Obtain a API Key from (here)[https://api.census.gov/data/key_signup.html]
+0. You will *select* one of the cities based on county info
+1. You will then *Extract* data from Census via R's API OR Python's API OR directly from Census  website (last option will most likely not occur, but it will be a last option)
 2. *Store* data locally (on your machine or in the cloud), yours first
 3. *Plot* data using R
 4. *Add* aesthetics to plot (different races, with random points)

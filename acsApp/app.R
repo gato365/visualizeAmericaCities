@@ -37,7 +37,7 @@ ui <- fluidPage(
   # Sidebar with a slider input for number of bins 
   sidebarLayout(
     sidebarPanel(
-      selectInput(h1('race'),h1('Select Race'),list('Asian' = 'B02001_005E',
+      selectInput('race',h1('Select Race'),list('Asian' = 'B02001_005E',
                                                     'African American' = 'B02001_003E',
                                                     "White" = 'B02001_002E', 
                                                     'American Indian and Alaska Native' = 'B02001_004E', 
@@ -58,7 +58,7 @@ ui <- fluidPage(
                                                                             "California - San Francisco County" = "CA - San Francisco County",
                                                                             "DC - District of Columbia County" = "DC - District of Columbia County")),
       
-      selectInput("Year", "Choose Selected Year", choices = list("2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019")),
+      selectInput("year", "Choose Selected Year", choices = list("2010", "2011", "2012", "2013", "2014", "2015", "2016", "2017", "2018", "2019")),
       
       actionButton("button","Map")
     ),
@@ -70,7 +70,7 @@ ui <- fluidPage(
       
       #add button to calculate 
       
-      # plotOutput("distPlot"),
+      plotOutput("distPlot"),
       verbatimTextOutput('state_county')
     )
   )
@@ -81,20 +81,21 @@ server <- function(input, output) {
   
   inform <- eventReactive(input$button,{
     select_sc = input$state_county
-    select_year = input$Year
     select_sc_clean = str_trim(str_split(select_sc,'-')[[1]])
     selected_state = select_sc_clean[1]
     selected_county = select_sc_clean[2]
     tmp_state = selected_state
     tmp_county = selected_county
     tmp_race = input$race
-    tmp_year = input$Year
+    tmp_year = input$year
     
-    # tmp_sf_file <- get_acs(geography = "tract", state = tmp_state, 
-    #                    county = tmp_county,
-    #                    variable = tmp_race, 
-    #                    geometry = TRUE, year = as.numeric(tmp_year),
-    #                    cache_table = TRUE)
+    tmp_sf_file <- get_acs(geography = "tract", 
+                           state = tmp_state,
+                           county = tmp_county,
+                           variable = tmp_race,
+                           geometry = TRUE, 
+                           year = as.numeric(tmp_year),
+                           cache_table = TRUE)
     
     return(list(tmp_state = tmp_state,tmp_county = tmp_county,
                 tmp_race = tmp_race, tmp_year = tmp_year))#, tmp_sf_file = tmp_sf_file))
@@ -117,14 +118,14 @@ server <- function(input, output) {
     state = inform$tmp_state
     county = inform$tmp_county
     year = inform$tmp_year
-    #race = names(race[race == inform$tmp_race])
+    race = names(race[race == inform$tmp_race])
     
-    #sf_file = inform$tmp_sf_file
+    sf_file = inform$tmp_sf_file
     
     
-    #total = sum(sf_file$estimate)
+    total = sum(sf_file$estimate)
     
-    paste0('State: ', state, ', County: ', county, ' , Year: ', year)#, ' , Race: ', race)#, " , Total: ", total)
+    paste0('State: ', state, ', County: ', county, ', Year: ', year, ', Race: ', race, ', Total: ', total)
     
     
   })
