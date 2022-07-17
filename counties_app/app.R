@@ -16,8 +16,13 @@ library(r2r)
 library(stringr)
 library(tidyverse)
 
+<<<<<<< HEAD
 #setwd("/cloud/project")
 setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+=======
+setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+>>>>>>> 88564e848d06998a18ecb6b4abbd403a29f7068b
 
 # Hash maps for all the information
 citiesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'citiesMap')
@@ -114,6 +119,11 @@ ui <- fluidPage(
   titlePanel("County Map"),
   selectInput("county", "County:",
               dropDownVector),
+<<<<<<< HEAD
+=======
+  radioButtons("density", "Population per dot: ",
+               c(100, 200, 400, 800, 1600, 3200)),
+>>>>>>> 88564e848d06998a18ecb6b4abbd403a29f7068b
   plotOutput("distPlot")
   # Application title
   # titlePanel("Old Faithful Geyser Data"),
@@ -152,14 +162,26 @@ server <- function(input, output, session) {
   #   return(city_race)
   # })
   load(file="../counties_dataframes.rda")
+<<<<<<< HEAD
   observeEvent(input$county, {
+=======
+  
+  toListen <- reactive({
+    list(input$county,input$density)
+  })
+  
+  observeEvent(toListen(), {
+>>>>>>> 88564e848d06998a18ecb6b4abbd403a29f7068b
     race_vars <- c(
       Hispanic = "P2_002N",
       White = "P2_005N",
       Black = "P2_006N",
       Asian = "P2_008N"
     )
+<<<<<<< HEAD
 
+=======
+>>>>>>> 88564e848d06998a18ecb6b4abbd403a29f7068b
     city_race <- get(formatted_counties[input$county][[1]][1])
 
     #print(city_race2)
@@ -169,7 +191,11 @@ server <- function(input, output, session) {
       city_race,
       value = "value",
       # Best values for each city:
+<<<<<<< HEAD
       values_per_dot = 400, # 100 -> 800
+=======
+      values_per_dot = as.numeric(input$density), # 100 -> 800
+>>>>>>> 88564e848d06998a18ecb6b4abbd403a29f7068b
       group = "variable"
     )
     # Use one set of polygon geometries as a base layer
