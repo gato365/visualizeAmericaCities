@@ -187,26 +187,28 @@ p2 <- ggplot(data=grouped_df) +
           #mapping = aes(fill = AREA),
           #fill = "white",
           #color = "grey"
-          )
-  
+          ) +
+  geom_sf(data = city_dots2,  
+         aes(color = variable), # variable -> "red"
+         size = 0.3) + # 0.01 -> 0.3
  
   
   # geom_sf_text(data = grouped_df,
   #              mapping = aes(label=NAME)) +
   #geom_text(aes(label=NAME), data = grouped_df) +
-  # theme_void() +
-  # scale_color_manual(values = c("Black" = "blue",
-  #                               "Asian" = "red",
-  #                               "White" = "green",
-  #                               "Hispanic" = "orange"))
+  theme_void() +
+  scale_color_manual(values = c("Black" = "blue",
+                               "Asian" = "red",
+                               "White" = "green",
+                               "Hispanic" = "orange"))
 
 gg_2 <- ggplotly(p2)
 
-gg_2 %>% 
+gg_3 <- gg_2 %>% 
   style(
     hoveron = "fills",
     # override the color mapping
-    line.color = toRGB("gray40"),
+    # line.color = toRGB("gray40"),
     # don't apply these style rules to the first trace, which is the background graticule/grid
     traces = seq.int(3, length(gg_2$x$data))
   ) %>%
