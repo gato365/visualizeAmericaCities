@@ -119,15 +119,15 @@ city_race <- get_decennial(
   year = 2020
 )
 
-# Splitting tract and state
-city_race[c('tract', 'county', 'state')] = str_split_fixed(city_race$NAME, ', ', 3)
-# Rearrange columns and remove old NAME column
-city_race = city_race[c('GEOID', 'tract', 'county', 'state', 'variable', 'value', 'geometry')]
+# # Splitting tract and state
+# city_race[c('tract', 'county', 'state')] = str_split_fixed(city_race$NAME, ', ', 3)
+# # Rearrange columns and remove old NAME column
+# city_race = city_race[c('GEOID', 'tract', 'county', 'state', 'variable', 'value', 'geometry')]
 
 city_race3 <- get("new_york_NY_df")
 # Convert data to dots
 city_dots <- as_dot_density(
-  city_race3,
+  city_race,
   value = "value",
   # Best values for each city: 
   values_per_dot = 400, # 100 -> 800
@@ -153,7 +153,7 @@ plot(p)
 
 grouped_df = city_race
 grouped_df = grouped_df %>% 
-  group_by(tract) %>% 
+  group_by(NAME) %>% 
   mutate(total_population = sum(value)) %>% 
   mutate(race_percent = (value/total_population) * 100)
 
@@ -166,28 +166,50 @@ city_dots2 <- as_dot_density(
   group = "variable"
 )
 
+grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
 
-p2 <- ggplot(data=grouped_df) +
-  geom_sf(data = grouped_df,
-          aes(text=tract, fill=total_population)
-          #mapping = aes(fill = AREA),
-          #fill = "white",
-          #color = "grey"
-          ) +
+p3 <- ggplot() +
+  geom_sf(data = grouped_df_base,
+          fill = "white",
+          color = "grey") +
   geom_sf(data = city_dots2,  
           aes(color = variable), # variable -> "red"
           size = 0.3) + # 0.01 -> 0.3
-  # geom_sf_text(data = grouped_df,
-  #              mapping = aes(label=NAME)) +
-  #geom_text(aes(label=NAME), data = grouped_df) +
   theme_void() +
   scale_color_manual(values = c("Black" = "blue",
                                 "Asian" = "red",
                                 "White" = "green",
                                 "Hispanic" = "orange"))
 
+p2 <- ggplot(data=grouped_df) +
+  geom_sf(data = grouped_df_base,
+          aes(text=NAME, fill=total_population, color=NAME)
+          #mapping = aes(fill = AREA),
+          #fill = "white",
+          #color = "grey"
+          )
+  
+ 
+  
+  # geom_sf_text(data = grouped_df,
+  #              mapping = aes(label=NAME)) +
+  #geom_text(aes(label=NAME), data = grouped_df) +
+  # theme_void() +
+  # scale_color_manual(values = c("Black" = "blue",
+  #                               "Asian" = "red",
+  #                               "White" = "green",
+  #                               "Hispanic" = "orange"))
+
 gg_2 <- ggplotly(p2)
 
-gg_2
+gg_2 %>% 
+  style(
+    hoveron = "fills",
+    # override the color mapping
+    line.color = toRGB("gray40"),
+    # don't apply these style rules to the first trace, which is the background graticule/grid
+    traces = seq.int(3, length(gg_2$x$data))
+  ) %>%
+  hide_legend()
     
   # summarise(total_population = sum(value))
