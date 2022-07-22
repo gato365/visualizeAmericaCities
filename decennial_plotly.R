@@ -6,8 +6,8 @@ library(r2r)
 
 
 # Setting working directory
-#setwd("/cloud/project/visualizeAmericaCities")
-setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
 
 # Census API Key
 census_api_key("c6b08260100da512461c050868ee3ff16629f4ca", install=TRUE, overwrite=TRUE)
@@ -152,7 +152,8 @@ p <- ggplot() +
 
 plot(p)
 
-grouped_df = city_race
+grouped_df = city_race[c(1:1000,1333:5328),]
+grouped_df = city_race[]
 grouped_df = grouped_df %>% 
   group_by(NAME) %>% 
   mutate(total_population = sum(value)) %>% 

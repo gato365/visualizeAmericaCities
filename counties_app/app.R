@@ -20,8 +20,8 @@ library(stringr)
 library(tidyverse)
 
 ## Set working directory
-setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-#setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+setwd("/cloud/project/visualizeAmericaCities")
 
 ###############################################
 ## Main County Mapping
@@ -248,9 +248,9 @@ server <- function(input, output, session) {
   ## Watching for changes in the reactive object
   observeEvent(toListen(), {
     ## Conditional for boroughs
-    # if(input$county == "New York, NY") {
-    #   updateSelectInput(session=session, inputId="borough", choices=formatted_boroughs)
-    # }
+    if(input$county == "New York, NY") {
+     updateSelectInput(session=session, inputId="borough", choices=formatted_boroughs)
+    }
     print(input$county)
     #if(input$county)
     ## Identify variables for mapping

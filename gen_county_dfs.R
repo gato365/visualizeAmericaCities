@@ -6,8 +6,8 @@ library(r2r)
 library(stringr)
 
 # Setting working directory
-# setwd("/cloud/project/visualizeAmericaCities")
-setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
 
 # Census API Key
 census_api_key("c6b08260100da512461c050868ee3ff16629f4ca", install=TRUE, overwrite=TRUE)
