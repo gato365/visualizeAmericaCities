@@ -6,13 +6,14 @@ library(r2r)
 
 
 # Setting working directory
-setwd("/cloud/project/visualizeAmericaCities")
+#setwd("/cloud/project/visualizeAmericaCities")
+setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
 
 # Census API Key
 census_api_key("c6b08260100da512461c050868ee3ff16629f4ca", install=TRUE, overwrite=TRUE)
 # Get user input for city
 # !!!!!!IMPORTANT!!!!!! RUN THIS LINE SEPARATELY -----
-user_input = 1
+user_input = 3
 # -----
 
 # Hash maps for all the information
@@ -124,7 +125,7 @@ city_race <- get_decennial(
 # # Rearrange columns and remove old NAME column
 # city_race = city_race[c('GEOID', 'tract', 'county', 'state', 'variable', 'value', 'geometry')]
 
-city_race3 <- get("new_york_NY_df")
+city_race3 <- get("chicago_IL_df")
 # Convert data to dots
 city_dots <- as_dot_density(
   city_race,

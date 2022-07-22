@@ -8,6 +8,7 @@
 #
 
 # Installing packages
+library(plotly)
 library(bslib)
 library(shiny)
 library(readxl)
@@ -19,9 +20,12 @@ library(stringr)
 library(tidyverse)
 
 ## Set working directory
-#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-setwd("/cloud/project/visualizeAmericaCities")
+setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+#setwd("/cloud/project/visualizeAmericaCities")
 
+###############################################
+## Main County Mapping
+###############################################
 ## Hash map mapping number to county ANSI code
 citiesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'citiesMap')
 citiesMap_df = citiesMap_df %>% 
@@ -70,10 +74,62 @@ vec2 = stateNameMap_df$V2
 stateNameMap = hashmap()
 stateNameMap[vec1] = vec2
 
+###############################################
+## Borough Mapping
+###############################################
+# Hash map mapping number to county ANSI code
+boroughMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'boroughMap')
+boroughMap_df = boroughMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(boroughMap_df$V1)
+vec2 = as.numeric(boroughMap_df$V2)
+boroughMap = hashmap()
+boroughMap[vec1] = vec2
+
+# Hash map mapping number to state FISP code
+bStatesMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'bStatesMap')
+bStatesMap_df = bStatesMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(bStatesMap_df$V1)
+vec2 = as.numeric(bStatesMap_df$V2)
+bStatesMap = hashmap()
+bStatesMap[vec1] = vec2
+
+# Hash map mapping number to county name
+boroughNameMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'boroughNameMap')
+boroughNameMap_df = boroughNameMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(boroughNameMap_df$V1)
+vec2 = boroughNameMap_df$V2
+boroughNameMap = hashmap()
+boroughNameMap[vec1] = vec2
+
+# Hash map mapping number to state USPS code
+bStateNameMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'bStateNameMap')
+bStateNameMap_df = bStateNameMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(bStateNameMap_df$V1)
+vec2 = bStateNameMap_df$V2
+bStateNameMap = hashmap()
+bStateNameMap[vec1] = vec2
+
 #plot(p)
 
 ## Steps to make drop down
 ## 1. paste together county + state into a vector
+## COUNTIES
 dropDownVector = c()
 for (i in 1:length(countyNameMap)) {
   ## Format County
@@ -94,11 +150,33 @@ for (i in 1:length(countyNameMap)) {
   ## Append to main vector
   dropDownVector = append(dropDownVector, county_state_name)
 } 
+## BOROUGHS
+dropDownVector2 = c()
+for (i in 1:length(boroughNameMap)) {
+  ## Format Borough
+  borough_name = boroughNameMap[as.numeric(i)] # extract county name
+  state_name = bStateNameMap[as.numeric(i)] # extract state name
+  split_borough = strsplit(as.character(borough_name), "_") # split by underscore
+  temp_vector = c()
+  for (i in 1:length(split_borough[[1]])) {
+    temp_vector = append(temp_vector, split_borough[[1]][i]) # append each word
+  }
+  split_borough = paste(temp_vector, collapse=" ") # combine to a string
+  split_borough = str_to_title(split_borough) # uppercase first letter of each word for formatting
+  
+  ## Format State
+  state_name = state_name[[1]][1]
+  county_state_name = paste(split_borough, state_name, sep=", ")
+  
+  ## Append to main vector
+  dropDownVector2 = append(dropDownVector2, county_state_name)
+}
 ## 2. use vector as selectInput
 # DONE
 
 ## 3. Format county strings to match loaded rdata format
 ## Ex: "New York, NY" -> "new_york_NY_df"
+## COUNTIES
 rda_strings = c()
 for (i in 1:length(dropDownVector)) {
   temp_string = dropDownVector[i]
@@ -114,8 +192,23 @@ for (i in 1:length(dropDownVector)) {
 formatted_counties = hashmap()
 formatted_counties[dropDownVector] = rda_strings
 
-boroughVector = c()
+## BOROUGHS
+borough_rda_strings = c()
+for (i in 1:length(dropDownVector2)) {
+  temp_string = dropDownVector2[i]
+  split_string = str_trim(unlist(strsplit(temp_string,",")))
+  split_string[1] = tolower(split_string[1])
+  split_string[1] = str_replace(split_string[1], " ", "_")
+  split_string = append(split_string, "df")
+  joined_string = paste(split_string, collapse="_")
+  borough_rda_strings = append(borough_rda_strings, joined_string)
+}
 
+## Hash map mapping old string to new formatted string
+formatted_boroughs = hashmap()
+formatted_boroughs[dropDownVector2] = borough_rda_strings
+
+empty_vector = c()
 ## Define UI for application
 ui <- fluidPage(
   ## bslib theme
@@ -129,7 +222,7 @@ ui <- fluidPage(
       ## Drop down list for choosing a county
       selectInput("county", "County:",
                   dropDownVector),
-      selectInput("borough", "Borough:", boroughVector), 
+      selectInput("borough", "Borough:", empty_vector), 
       ## Radio buttons for choosing population density per dot
       radioButtons("density", "Population per dot: ",
                    c(400, 800, 1600, 3200)),
@@ -149,11 +242,17 @@ server <- function(input, output, session) {
   load(file="../counties_dataframes.rda")
   ## Create reactive object
   toListen <- reactive({
-    list(input$county,input$density)
+    list(input$county,input$density,input$borough)
   })
   
   ## Watching for changes in the reactive object
   observeEvent(toListen(), {
+    ## Conditional for boroughs
+    # if(input$county == "New York, NY") {
+    #   updateSelectInput(session=session, inputId="borough", choices=formatted_boroughs)
+    # }
+    print(input$county)
+    #if(input$county)
     ## Identify variables for mapping
     race_vars <- c(
       Hispanic = "P2_002N",
@@ -196,8 +295,10 @@ server <- function(input, output, session) {
                                     "White" = "green",
                                     "Hispanic" = "orange"))
     ## Create ggplotly
+    print("reached ggplotly")
     gg_2 <- ggplotly(p2)
     ## This code below allows user to hover over tract area and get information
+    print("reached gg3")
     gg_3 <- gg_2 %>% 
       style(
         hoveron = "fills",
@@ -207,6 +308,7 @@ server <- function(input, output, session) {
         traces = seq.int(3, length(gg_2$x$data))
       ) %>%
       hide_legend()
+    print("reached render plotly")
     output$distPlot <- renderPlotly(
       gg_3
     )

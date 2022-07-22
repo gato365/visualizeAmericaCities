@@ -12,6 +12,9 @@ setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
 # Census API Key
 census_api_key("c6b08260100da512461c050868ee3ff16629f4ca", install=TRUE, overwrite=TRUE)
 
+###############################################
+## Main County Mapping
+###############################################
 # Hash map mapping number to county ANSI code
 citiesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'citiesMap')
 citiesMap_df = citiesMap_df %>% 
@@ -60,6 +63,57 @@ vec2 = stateNameMap_df$V2
 stateNameMap = hashmap()
 stateNameMap[vec1] = vec2
 
+###############################################
+## Borough Mapping
+###############################################
+# Hash map mapping number to county ANSI code
+boroughMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'boroughMap')
+boroughMap_df = boroughMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(boroughMap_df$V1)
+vec2 = as.numeric(boroughMap_df$V2)
+boroughMap = hashmap()
+boroughMap[vec1] = vec2
+
+# Hash map mapping number to state FISP code
+bStatesMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'bStatesMap')
+bStatesMap_df = bStatesMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(bStatesMap_df$V1)
+vec2 = as.numeric(bStatesMap_df$V2)
+bStatesMap = hashmap()
+bStatesMap[vec1] = vec2
+
+# Hash map mapping number to county name
+boroughNameMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'boroughNameMap')
+boroughNameMap_df = boroughNameMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(boroughNameMap_df$V1)
+vec2 = boroughNameMap_df$V2
+boroughNameMap = hashmap()
+boroughNameMap[vec1] = vec2
+
+# Hash map mapping number to state USPS code
+bStateNameMap_df = read_xlsx('borough_state_data.xlsx', col_names=FALSE, sheet = 'bStateNameMap')
+bStateNameMap_df = bStateNameMap_df %>% 
+  rename(
+    V1 = ...1,
+    V2 = ...2
+  )
+vec1 = as.numeric(bStateNameMap_df$V1)
+vec2 = bStateNameMap_df$V2
+bStateNameMap = hashmap()
+bStateNameMap[vec1] = vec2
+
 # Identify variables for mapping
 race_vars <- c(
   Hispanic = "P2_002N",
@@ -102,7 +156,36 @@ for (i in 1:length(countyNameMap)) {
 save(list=df_vector, file="counties_dataframes.rda")
 
 # Doing the same for boroughs
+df_vector2 = c()
+for (i in 1:length(boroughNameMap)) {
+  city_race <- get_decennial(
+    geography = "tract",
+    variables = race_vars,
+    state = bStatesMap[as.numeric(i)],
+    county = boroughMap[as.numeric(i)],
+    geometry = TRUE,
+    year = 2020
+  )
+  dummy_df = city_race
+  # Splitting NAME column into TRACT, COUNTY, STATE (breaks R Shiny)
+  # # paste(countyNameMap[as.character(i)], stateNameMap[as.character(i)], sep='_')
+  # dummy_df = data.frame(GEOID=city_race$GEOID, NAME=city_race$NAME, variable=city_race$variable, 
+  #                       value=city_race$value, geometry=city_race$geometry)
+  # # Splitting state and county into separate variables
+  # dummy_df[c('TRACT', 'COUNTY', 'STATE')] = str_split_fixed(dummy_df$NAME, ', ', 3)
+  # # Rearrange columns and remove old NAME column
+  # dummy_df = dummy_df[c('GEOID', 'TRACT', 'COUNTY', 'STATE', 'variable', 'value', 'geometry')]
+  borough_name = boroughNameMap[as.numeric(i)]
+  state_name = bStateNameMap[as.numeric(i)]
+  arg_name = do.call("substitute", list(borough_name)) # Get argument name
+  var_name = paste(arg_name, state_name, "df", sep="_") # Construct the name
+  assign(var_name, dummy_df, env=.GlobalEnv)
+  # Append to vector used to make rda file
+  df_vector2 = append(df_vector2, var_name)
+}
 
+# Save all the dataframes to rda file
+save(list=df_vector2, file="boroughs_dataframes.rda")
 
 # # Convert city_race to a DF and store into RDA
 # # city_name = countyNameMap[user_input]
