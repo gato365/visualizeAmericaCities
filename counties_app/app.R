@@ -19,8 +19,8 @@ library(stringr)
 library(tidyverse)
 
 ## Set working directory
-setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-#setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+setwd("/cloud/project/visualizeAmericaCities")
 
 ## Hash map mapping number to county ANSI code
 citiesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'citiesMap')
@@ -118,17 +118,29 @@ boroughVector = c()
 
 ## Define UI for application
 ui <- fluidPage(
-  ## Main title
-  titlePanel("County Map"),
-  ## Drop down list for choosing a county
-  selectInput("county", "County:",
-              dropDownVector),
-  selectInput("borough", "Borough:", boroughVector), 
-  ## Radio buttons for choosing population density per dot
-  radioButtons("density", "Population per dot: ",
-               c(400, 800, 1600, 3200)),
-  ## Graphing plotly
-  plotlyOutput("distPlot")
+  ## bslib theme
+  theme = bs_theme(version = 5),
+  tabsetPanel(
+    tabPanel(
+      "County Map",
+      "An interactive county map",
+      ## Main title
+      titlePanel("County Map"),
+      ## Drop down list for choosing a county
+      selectInput("county", "County:",
+                  dropDownVector),
+      selectInput("borough", "Borough:", boroughVector), 
+      ## Radio buttons for choosing population density per dot
+      radioButtons("density", "Population per dot: ",
+                   c(400, 800, 1600, 3200)),
+      ## Graphing plotly
+      plotlyOutput("distPlot")
+    ),
+    tabPanel(
+      "Table",
+      "TODO after map is finished"
+    )
+  )
 )
 
 ## Define server logic
