@@ -1,3 +1,4 @@
+# Installing packages
 library(tidycensus)
 library(ggplot2)
 library(terra)
@@ -11,7 +12,7 @@ setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
 # Census API Key
 census_api_key("c6b08260100da512461c050868ee3ff16629f4ca", install=TRUE, overwrite=TRUE)
 
-# Hash maps for all the information
+# Hash map mapping number to county ANSI code
 citiesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'citiesMap')
 citiesMap_df = citiesMap_df %>% 
   rename(
@@ -23,6 +24,7 @@ vec2 = as.numeric(citiesMap_df$V2)
 citiesMap = hashmap()
 citiesMap[vec1] = vec2
 
+# Hash map mapping number to state FISP code
 statesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'statesMap')
 statesMap_df = statesMap_df %>% 
   rename(
@@ -34,6 +36,7 @@ vec2 = as.numeric(statesMap_df$V2)
 statesMap = hashmap()
 statesMap[vec1] = vec2
 
+# Hash map mapping number to county name
 countyNameMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'countyNameMap')
 countyNameMap_df = countyNameMap_df %>% 
   rename(
@@ -45,6 +48,7 @@ vec2 = countyNameMap_df$V2
 countyNameMap = hashmap()
 countyNameMap[vec1] = vec2
 
+# Hash map mapping number to state USPS code
 stateNameMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'stateNameMap')
 stateNameMap_df = stateNameMap_df %>% 
   rename(
@@ -77,6 +81,7 @@ for (i in 1:length(countyNameMap)) {
     year = 2020
   )
   dummy_df = city_race
+  # Splitting NAME column into TRACT, COUNTY, STATE (breaks R Shiny)
   # # paste(countyNameMap[as.character(i)], stateNameMap[as.character(i)], sep='_')
   # dummy_df = data.frame(GEOID=city_race$GEOID, NAME=city_race$NAME, variable=city_race$variable, 
   #                       value=city_race$value, geometry=city_race$geometry)
@@ -96,6 +101,7 @@ for (i in 1:length(countyNameMap)) {
 # Save all the dataframes to rda file
 save(list=df_vector, file="counties_dataframes.rda")
 
+# Doing the same for boroughs
 
 
 # # Convert city_race to a DF and store into RDA

@@ -7,8 +7,6 @@
 #    http://shiny.rstudio.com/
 #
 
-# Installing packages
-library(bslib)
 library(shiny)
 library(readxl)
 library(tidycensus)
@@ -18,11 +16,10 @@ library(r2r)
 library(stringr)
 library(tidyverse)
 
-## Set working directory
-setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-#setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+setwd("/cloud/project/visualizeAmericaCities")
 
-## Hash map mapping number to county ANSI code
+# Hash maps for all the information
 citiesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'citiesMap')
 citiesMap_df = citiesMap_df %>% 
   rename(
@@ -34,7 +31,6 @@ vec2 = as.numeric(citiesMap_df$V2)
 citiesMap = hashmap()
 citiesMap[vec1] = vec2
 
-## Hash map mapping number to state FISP code
 statesMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'statesMap')
 statesMap_df = statesMap_df %>% 
   rename(
@@ -46,7 +42,6 @@ vec2 = as.numeric(statesMap_df$V2)
 statesMap = hashmap()
 statesMap[vec1] = vec2
 
-## Hash map mapping number to county name
 countyNameMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'countyNameMap')
 countyNameMap_df = countyNameMap_df %>% 
   rename(
@@ -58,7 +53,6 @@ vec2 = countyNameMap_df$V2
 countyNameMap = hashmap()
 countyNameMap[vec1] = vec2
 
-## Hash map mapping number to state USPS code
 stateNameMap_df = read_xlsx('county_state_data.xlsx', col_names=FALSE, sheet = 'stateNameMap')
 stateNameMap_df = stateNameMap_df %>% 
   rename(
@@ -72,11 +66,11 @@ stateNameMap[vec1] = vec2
 
 #plot(p)
 
-## Steps to make drop down
-## 1. paste together county + state into a vector
+# Steps to make drop down
+# 1. paste together county + state into a vector
 dropDownVector = c()
 for (i in 1:length(countyNameMap)) {
-  ## Format County
+  # Format County
   county_name = countyNameMap[as.numeric(i)] # extract county name
   state_name = stateNameMap[as.numeric(i)] # extract state name
   split_county = strsplit(as.character(county_name), "_") # split by underscore
@@ -87,18 +81,20 @@ for (i in 1:length(countyNameMap)) {
   split_county = paste(temp_vector, collapse=" ") # combine to a string
   split_county = str_to_title(split_county) # uppercase first letter of each word for formatting
   
-  ## Format State
+  # Format State
   state_name = state_name[[1]][1]
   county_state_name = paste(split_county, state_name, sep=", ")
   
-  ## Append to main vector
+  # Append to main vector
   dropDownVector = append(dropDownVector, county_state_name)
 } 
-## 2. use vector as selectInput
+# 2. use vector as selectInput
 # DONE
 
-## 3. Format county strings to match loaded rdata format
-## Ex: "New York, NY" -> "new_york_NY_df"
+# 3. Loading RDA
+load(file="counties_dataframes.rda")
+
+# 4. Format county strings to match loaded rdata format
 rda_strings = c()
 for (i in 1:length(dropDownVector)) {
   temp_string = dropDownVector[i]
@@ -110,39 +106,59 @@ for (i in 1:length(dropDownVector)) {
   rda_strings = append(rda_strings, joined_string)
 }
 
-## Hash map mapping old string to new formatted string
 formatted_counties = hashmap()
 formatted_counties[dropDownVector] = rda_strings
 
-boroughVector = c()
-
-## Define UI for application
+# Define UI for application that draws a histogram
 ui <- fluidPage(
-  ## Main title
   titlePanel("County Map"),
-  ## Drop down list for choosing a county
   selectInput("county", "County:",
               dropDownVector),
-  selectInput("borough", "Borough:", boroughVector), 
-  ## Radio buttons for choosing population density per dot
   radioButtons("density", "Population per dot: ",
                c(400, 800, 1600, 3200)),
-  ## Graphing plotly
-  plotlyOutput("distPlot")
+  plotOutput("distPlot")
+  # Application title
+  # titlePanel("Old Faithful Geyser Data"),
+  # 
+  # # Sidebar with a slider input for number of bins 
+  # sidebarLayout(
+  #     sidebarPanel(
+  #         sliderInput("bins",
+  #                     "Number of bins:",
+  #                     min = 1,
+  #                     max = 50,
+  #                     value = 30)
+  #     ),
+  # 
+  #     # Show a plot of the generated distribution
+  #     mainPanel(
+  #        plotOutput("distPlot")
+  #     )
+  # )
 )
 
-## Define server logic
+# Define server logic required to draw a histogram
 server <- function(input, output, session) {
-  ## Load RDA
+  ####### PLOTTING CODE
+  # test_reactive <- eventReactive(countyNum, {
+  #   city_race <- get_decennial(
+  #     geography = "tract",
+  #     variables = race_vars,
+  #     state = 36,
+  #     county = 61,
+  #     # state = reactive({statesMap[as.numeric(countyNum())][[1]][1]}),
+  #     # county = reactive({citiesMap[as.numeric(countyNum())][[1]][1]}),
+  #     geometry = TRUE,
+  #     year = 2020
+  #  )
+  #   return(city_race)
+  # })
   load(file="../counties_dataframes.rda")
-  ## Create reactive object
   toListen <- reactive({
     list(input$county,input$density)
   })
   
-  ## Watching for changes in the reactive object
   observeEvent(toListen(), {
-    ## Identify variables for mapping
     race_vars <- c(
       Hispanic = "P2_002N",
       White = "P2_005N",
@@ -151,59 +167,54 @@ server <- function(input, output, session) {
     )
     city_race <- get(formatted_counties[input$county][[1]][1])
     
-    ## Create new columns for more information
-    grouped_df = city_race
-    grouped_df = grouped_df %>% 
-      group_by(NAME) %>% 
-      mutate(total_population = sum(value)) %>% 
-      mutate(race_percent = (value/total_population) * 100)
-    
-    ## Convert data to dots
+    #print(city_race2)
+    #view(city_race2)
+    # Convert data to dots
     city_dots <- as_dot_density(
-      grouped_df,
+      city_race,
       value = "value",
       # Best values for each city:
-      values_per_dot = as.numeric(input$density),
+      values_per_dot = as.numeric(input$density), # 100 -> 800
+      #values_per_dot = 1600,
       group = "variable"
     )
-    ## Use one set of polygon geometries as a base layer
-    grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
-    
-    ## Map with ggplot2
+    # Use one set of polygon geometries as a base layer
+    city_base <- city_race[city_race$variable == "Hispanic", ]
+    # Map with ggplot2
     print("Reached ggplot2")
-    p2 <- ggplot(data=grouped_df) +
-      geom_sf(data = grouped_df_base,
-              aes(text=NAME, color=NAME)
-      ) +
-      geom_sf(data = city_dots,  
-              aes(color = variable),
+    p <- ggplot() +
+      geom_sf(data = city_base,
+              fill = "white",
+              color = "grey") +
+      geom_sf(data = city_dots,
+              aes(color = variable), # variable -> "red"
               size = 0.3) + # 0.01 -> 0.3
       theme_void() +
       scale_color_manual(values = c("Black" = "blue",
                                     "Asian" = "red",
                                     "White" = "green",
                                     "Hispanic" = "orange"))
-    ## Create ggplotly
-    gg_2 <- ggplotly(p2)
-    ## This code below allows user to hover over tract area and get information
-    gg_3 <- gg_2 %>% 
-      style(
-        hoveron = "fills",
-        # override the color mapping
-        # line.color = toRGB("gray40"),
-        # don't apply these style rules to the first trace, which is the background graticule/grid
-        traces = seq.int(3, length(gg_2$x$data))
-      ) %>%
-      hide_legend()
-    output$distPlot <- renderPlotly(
-      gg_3
+    
+    output$distPlot <- renderPlot(
+      p
     )
   })
-  ## Exit gracefully
+  
+  
+  #####
+  
+  # output$distPlot <- renderPlot({
+  #     # generate bins based on input$bins from ui.R
+  #     x    <- faithful[, 2]
+  #     bins <- seq(min(x), max(x), length.out = input$bins + 1)
+  # 
+  #     # draw the histogram with the specified number of bins
+  #     hist(x, breaks = bins, col = 'darkgray', border = 'white')
+  # })
   session$onSessionEnded(function() {
     stopApp()
   })
 }
 
-## Run the application 
+# Run the application 
 shinyApp(ui = ui, server = server)

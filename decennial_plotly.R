@@ -183,7 +183,7 @@ p3 <- ggplot() +
 
 p2 <- ggplot(data=grouped_df) +
   geom_sf(data = grouped_df_base,
-          aes(text=NAME, fill=total_population, color=NAME)
+          aes(text=NAME, color=NAME)
           #mapping = aes(fill = AREA),
           #fill = "white",
           #color = "grey"
