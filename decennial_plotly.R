@@ -1,19 +1,22 @@
 library(plotly)
 library(tidycensus)
-library(ggplot2)
+library(ggplot2) 
 library(terra)
 library(r2r)
+library(sf)
+library(readxl)
+
 
 
 # Setting working directory
-setwd("/cloud/project/visualizeAmericaCities")
-#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+#setwd("/cloud/project/visualizeAmericaCities")
+setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
 
 # Census API Key
 census_api_key("c6b08260100da512461c050868ee3ff16629f4ca", install=TRUE, overwrite=TRUE)
 # Get user input for city
 # !!!!!!IMPORTANT!!!!!! RUN THIS LINE SEPARATELY -----
-user_input = 3
+user_input = 1 # indianpolis = 15, baltimore = 30
 # -----
 
 # Hash maps for all the information
@@ -61,26 +64,7 @@ vec2 = stateNameMap_df$V2
 stateNameMap = hashmap()
 stateNameMap[vec1] = vec2
 
-# citiesMap = hashmap()
-# citiesMap[c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17",
-#             "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
-#             "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50")] =
-#   c(061, 037, 031, 201, 013, 101, 029, 073, 113, 085,
-#     015, 031, 439, 049, 097, 119, 075, 033, 031, 109,
-#     037, 141, 043, 025, 003, 051, 163, 111, 157, 005,
-#     079, 001, 019, 019, 067, 013, 209, 121, 055, 041,
-#     183, 810, 037, 086, 001, 053, 143, 029, 173, 439)
-# # Hash map for get_decennial state
-# statesMap = hashmap()
-# statesMap[c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17",
-#             "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
-#             "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50")] =
-#   c(36, 06, 17, 48, 04, 42, 48, 06, 48, 06, 48, 12, 48, 39, 18, 37, 06, 53, 08, 40, 47, 48, 24, 25, 32, 41, 26, 21,
-#     47, 24, 55, 35, 06, 04, 06, 04, 29, 13, 31, 08, 37, 51, 06, 12, 06, 27, 40, 06, 20, 48)
-# print(citiesMap[user_input])
-# print(statesMap[user_input])
-# # Hash map for df naming
-# countyNameMap = hashmap()
+
 # countyNameMap[c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17",
 #                 "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
 #                 "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50")] =
@@ -90,13 +74,6 @@ stateNameMap[vec1] = vec2
 #     "detroit", "louisville", "memphis", "baltimore", "milwaukee", "albuquerque", "fresno", "tucson", "sacramento",
 #     "mesa", "kansas_city", "atlanta", "omaha", "colorado_springs", "raleigh", "virginia_beach", "long_beach", "miami",
 #     "oakland", "minneapolis", "tulsa", "bakersfield", "wichita", "arlington")
-# stateNameMap = hashmap()
-# stateNameMap[c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17",
-#                "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33",
-#                "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50")] =
-#   c("NY", "CA", "IL", "TX", "AZ", "PA", "TX", "CA", "TX", "CA", "TX", "FL", "TX", "OH", "IN", "NC", "CA", "WA", "CO",
-#     "OK", "TN", "TX", "MD", "MA", "NV", "OR", "MI", "KY", "TN", "MD", "WI", "NM", "CA", "AZ", "CA", "AZ", "MO", "GA", 
-#     "NE", "CO", "NC", "VA", "CA", "FL", "CA", "MN", "OK", "CA", "KS", "TX")
 
 load(file="counties_dataframes.rda")
 
@@ -119,6 +96,20 @@ city_race <- get_decennial(
   geometry = TRUE,
   year = 2020
 )
+
+# Removing empty sf objects
+city_race = city_race[!st_is_empty(city_race$geometry),]
+city_race = city_race %>% 
+  group_by(NAME) %>% 
+  mutate(total_pop = sum(value)) %>% 
+  mutate(hispanic_pct = sum(ifelse(variable=="Hispanic", value/total_pop, 0))*100,
+         white_pct = sum(ifelse(variable=="White", value/total_pop, 0))*100,
+         black_pct = sum(ifelse(variable=="Black", value/total_pop, 0))*100,
+         asian_pct = sum(ifelse(variable=="Asian", value/total_pop, 0))*100)
+
+
+
+
 
 # # Splitting tract and state
 # city_race[c('tract', 'county', 'state')] = str_split_fixed(city_race$NAME, ', ', 3)
@@ -152,8 +143,8 @@ p <- ggplot() +
 
 plot(p)
 
-grouped_df = city_race[c(1:1000,1333:5328),]
-grouped_df = city_race[]
+#grouped_df = city_race[1:5000,]
+grouped_df = city_race
 grouped_df = grouped_df %>% 
   group_by(NAME) %>% 
   mutate(total_population = sum(value)) %>% 
@@ -185,7 +176,24 @@ p3 <- ggplot() +
 
 p2 <- ggplot(data=grouped_df) +
   geom_sf(data = grouped_df_base,
-          aes(text=NAME, color=NAME)
+          aes(text=
+                paste(
+                  paste(
+                    "Hispanic: ", round(hispanic_pct, digits=2), "%", sep=""
+                  ),
+                  paste(
+                    "White: ", round(white_pct, digits=2), "%", sep=""
+                  ),
+                  paste(
+                    "Black: ", round(black_pct, digits=2), "%", sep=""
+                  ),
+                  paste(
+                    "Asian: ", round(asian_pct, digits=2), "%", sep=""
+                  ),
+                  sep="\n"
+                ),
+                color=NAME
+          )
           #mapping = aes(fill = AREA),
           #fill = "white",
           #color = "grey"

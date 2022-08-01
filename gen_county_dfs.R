@@ -4,6 +4,8 @@ library(ggplot2)
 library(terra)
 library(r2r)
 library(stringr)
+library(readxl)
+
 
 # Setting working directory
 setwd("/cloud/project/visualizeAmericaCities")
@@ -134,6 +136,17 @@ for (i in 1:length(countyNameMap)) {
     geometry = TRUE,
     year = 2020
   )
+  city_race = city_race[!st_is_empty(city_race$geometry),]
+  city_race = city_race[!st_is_empty(city_race$geometry),]
+  city_race = city_race %>% 
+    group_by(NAME) %>% 
+    mutate(total_pop = sum(value)) %>% 
+    mutate(hispanic_pct = sum(ifelse(variable=="Hispanic", value/total_pop, 0))*100,
+           white_pct = sum(ifelse(variable=="White", value/total_pop, 0))*100,
+           black_pct = sum(ifelse(variable=="Black", value/total_pop, 0))*100,
+           asian_pct = sum(ifelse(variable=="Asian", value/total_pop, 0))*100)
+  
+  
   dummy_df = city_race
   # Splitting NAME column into TRACT, COUNTY, STATE (breaks R Shiny)
   # # paste(countyNameMap[as.character(i)], stateNameMap[as.character(i)], sep='_')
@@ -166,6 +179,17 @@ for (i in 1:length(boroughNameMap)) {
     geometry = TRUE,
     year = 2020
   )
+  city_race = city_race[!st_is_empty(city_race$geometry),]
+  city_race = city_race[!st_is_empty(city_race$geometry),]
+  city_race = city_race %>% 
+    group_by(NAME) %>% 
+    mutate(total_pop = sum(value)) %>% 
+    mutate(hispanic_pct = sum(ifelse(variable=="Hispanic", value/total_pop, 0))*100,
+           white_pct = sum(ifelse(variable=="White", value/total_pop, 0))*100,
+           black_pct = sum(ifelse(variable=="Black", value/total_pop, 0))*100,
+           asian_pct = sum(ifelse(variable=="Asian", value/total_pop, 0))*100)
+  
+  
   dummy_df = city_race
   # Splitting NAME column into TRACT, COUNTY, STATE (breaks R Shiny)
   # # paste(countyNameMap[as.character(i)], stateNameMap[as.character(i)], sep='_')

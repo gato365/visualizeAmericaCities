@@ -1,23 +1,12 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
-# Installing packages
-library(plotly)
-library(bslib)
-library(shiny)
-library(readxl)
 library(tidycensus)
-library(ggplot2)
+library(tidyverse)
+library(readxl)
+library(plotly)
+library(ggplot2) 
 library(terra)
 library(r2r)
-library(stringr) 
-library(tidyverse)
+library(sf)
+
 
 ## Set working directory
 setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
@@ -125,11 +114,6 @@ vec2 = bStateNameMap_df$V2
 bStateNameMap = hashmap()
 bStateNameMap[vec1] = vec2
 
-#plot(p)
-
-## Steps to make drop down
-## 1. paste together county + state into a vector
-## COUNTIES
 dropDownVector = c()
 for (i in 1:length(countyNameMap)) {
   ## Format County
@@ -171,11 +155,7 @@ for (i in 1:length(boroughNameMap)) {
   ## Append to main vector
   dropDownVector2 = append(dropDownVector2, county_state_name)
 }
-## 2. use vector as selectInput
-# DONE
 
-## 3. Format county strings to match loaded rdata format
-## Ex: "New York, NY" -> "new_york_NY_df"
 ## COUNTIES
 rda_strings = c()
 for (i in 1:length(dropDownVector)) {
@@ -187,10 +167,6 @@ for (i in 1:length(dropDownVector)) {
   joined_string = paste(split_string, collapse="_")
   rda_strings = append(rda_strings, joined_string)
 }
-
-## Hash map mapping old string to new formatted string
-formatted_counties = hashmap()
-formatted_counties[dropDownVector] = rda_strings
 
 ## BOROUGHS
 borough_rda_strings = c()
@@ -204,149 +180,184 @@ for (i in 1:length(dropDownVector2)) {
   borough_rda_strings = append(borough_rda_strings, joined_string)
 }
 
-## Hash map mapping old string to new formatted string
-formatted_boroughs = hashmap()
-formatted_boroughs[dropDownVector2] = borough_rda_strings
+## Join all the strings
+all_rda_strings = c(rda_strings, borough_rda_strings)
+## Remove vectors that have boroughs
+all_rda_strings = all_rda_strings[! all_rda_strings %in% c('new_york_NY_df')]
 
-empty_vector = c()
-## Define UI for application
-ui <- fluidPage(
-  ## bslib theme
-  theme = bs_theme(version = 5),
-  tabsetPanel(
-    tabPanel(
-      "County Map",
-      "An interactive county map",
-      ## Main title
-      titlePanel("County Map"),
-      ## Drop down list for choosing a county
-      selectInput("county", "County:",
-                  dropDownVector),
-      conditionalPanel("input.county == 'New York, NY'",
-                       selectInput('NYC_B','Select Borough:',
-                                   choices = dropDownVector2,
-                                   selected = "Manhattan, NY"),
-      ), 
-      ## Radio buttons for choosing population density per dot
-      radioButtons("density", "Population per dot: ",
-                   c(400, 800, 1600, 3200)),
-      ## Graphing plotly
-      plotlyOutput("distPlot")
-    ),
-    tabPanel(
-      "Table",
-      "TODO after map is finished; review stuff you need on slack"
-    )
-  )
-)
+## Load all the dataframes
+load(file="counties_dataframes.rda")
+load(file="boroughs_dataframes.rda")
 
-## Define server logic
-server <- function(input, output, session) {
-  ## Load RDA
-  load(file="../counties_dataframes.rda")
-  load(file="../boroughs_dataframes.rda")
-  ## Create reactive object
-  toListen <- reactive({
-    list(input$county,input$density,input$NYC_B)
-  })
-  
-  ## Watching for changes in the reactive object
-  observeEvent(toListen(), {
-    print(input$county)
-    #if(input$county)
-    ## Identify variables for mapping
-    race_vars <- c(
-      Hispanic = "P2_002N",
-      White = "P2_005N",
-      Black = "P2_006N",
-      Asian = "P2_008N"
+dist_race = "White"
+dist_percent = c(0.35, 0.59, 0.01, 0.05)
+dist_sample_size = 1000
+
+# test_race = get("san_jose_CA_df")
+# test_race = test_race %>% 
+#   mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
+#          white_count = round((total_pop * (white_pct/100)), digits=0),
+#          black_count = round((total_pop * (black_pct/100)), digits=0),
+#          asian_count = round((total_pop * (asian_pct/100)), digits=0))
+# test_race = test_race %>% 
+#   rowwise() %>% 
+#   mutate(
+#     test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
+#     p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
+#   )
+# ordered_race = test_race %>% 
+#   group_by(NAME) %>% 
+#   arrange(desc(p_val))
+# 
+# ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
+# ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
+#                               "black_count", "asian_count", "p_val")]
+# 
+# top_10_df = data.frame()
+# top_10_df = rbind(top_10_df, ordered_race)
+# top_10_df = head(top_10_df[order(top_10_df$p_val),], 10)
+
+top_10_df = data.frame()
+## Loop to traverse every single tract
+for (i in 1:length(all_rda_strings)) {
+  #city_race = get(all_rda_strings[i])
+  print(all_rda_strings[i])
+  city_race = get("philadelphia_PA_df")
+  ## Generate necessary columns
+  city_race = city_race %>% 
+    mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
+           white_count = round((total_pop * (white_pct/100)), digits=0),
+           black_count = round((total_pop * (black_pct/100)), digits=0),
+           asian_count = round((total_pop * (asian_pct/100)), digits=0))
+  ## Drop NAs
+  city_race = na.omit(city_race)
+  ## Perform chi-squared testing
+  city_race = city_race %>% 
+    rowwise() %>% 
+    mutate(
+      test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
+      p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
     )
-    if(input$county == "New York, NY") {
-      city_race <- get(formatted_boroughs[input$NYC_B][[1]][1])
-      #city_race <- get(formatted_counties[input$county][[1]][1])
-    } else {
-      city_race <- get(formatted_counties[input$county][[1]][1])
-    }
-    
-    ## Create new columns for more information
-    grouped_df = city_race
-    grouped_df = grouped_df %>% 
-      group_by(NAME) %>% 
-      mutate(total_population = sum(value)) %>% 
-      mutate(race_percent = (value/total_population) * 100)
-    
-    ## Convert data to dots
-    city_dots <- as_dot_density(
-      grouped_df,
-      value = "value",
-      # Best values for each city:
-      values_per_dot = as.numeric(input$density),
-      group = "variable"
-    )
-    ## Use one set of polygon geometries as a base layer
-    grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
-    
-    ## Map with ggplot2
-    print("Reached ggplot2")
-    p2 <- ggplot(data=grouped_df) +
-      geom_sf(data = grouped_df_base,
-              aes(text=
-                    paste(
-                      paste(
-                        "Total Population: ", total_pop, sep=""
-                      ),
-                      paste(
-                        "Hispanic: ", round(hispanic_pct, digits=2), "%", sep=""
-                      ),
-                      paste(
-                        "White: ", round(white_pct, digits=2), "%", sep=""
-                      ),
-                      paste(
-                        "Black: ", round(black_pct, digits=2), "%", sep=""
-                      ),
-                      paste(
-                        "Asian: ", round(asian_pct, digits=2), "%", sep=""
-                      ),
-                      sep="\n"
-                    ),
-                  color=NAME
-              )
-              #mapping = aes(fill = AREA),
-              #fill = "white",
-              #color = "grey"
-      ) +
-      geom_sf(data = city_dots,  
-              aes(color = variable),
-              size = 0.3) + # 0.01 -> 0.3
-      theme_void() +
-      scale_color_manual(values = c("Black" = "blue",
-                                    "Asian" = "red",
-                                    "White" = "green",
-                                    "Hispanic" = "orange"))
-    ## Create ggplotly
-    print("reached ggplotly")
-    gg_2 <- ggplotly(p2)
-    ## This code below allows user to hover over tract area and get information
-    print("reached gg3")
-    gg_3 <- gg_2 %>% 
-      style(
-        hoveron = "fills",
-        # override the color mapping
-        # line.color = toRGB("gray40"),
-        # don't apply these style rules to the first trace, which is the background graticule/grid
-        traces = seq.int(3, length(gg_2$x$data))
-      ) %>%
-      hide_legend()
-    print("reached render plotly")
-    output$distPlot <- renderPlotly(
-      gg_3
-    )
-  })
-  ## Exit gracefully
-  session$onSessionEnded(function() {
-    stopApp()
-  })
+  ## Sort by descen ding p-value
+  ordered_race = city_race %>% 
+    group_by(NAME) %>% 
+    arrange(desc(p_val))
+  #print(ordered_race)
+  ## Only keep top 10 p-values, and subset dataframe
+  ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
+  ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
+                                "black_count", "asian_count", "p_val", "test_stat")]
+  ## Keep top 10
+  top_10_df = rbind(top_10_df, ordered_race)
+  top_10_df = top_10_df[order(top_10_df$p_val),]
+  print(top_10_df)
+  #top_10_df = top_10_df[!duplicated(top_10_df),]
+  top_10_df = head(top_10_df, 10)
+  #print(top_10_df)
 }
 
-## Run the application 
-shinyApp(ui = ui, server = server)
+
+## IDEA FOR HOW ALGORITHM WORKS
+## vectorized, perform chi squared test on each row
+## get 10 smallest p values? 
+## add to the solution dataframe; if the length of the solution dataframe > 10
+##    remove the largest p-value
+
+grouped_df = city_race
+grouped_df = grouped_df %>% 
+  group_by(NAME) %>% 
+  mutate(total_population = sum(value)) %>% 
+  mutate(race_percent = (value/total_population) * 100)
+
+city_dots2 <- as_dot_density(
+  grouped_df,
+  value = "value",
+  # Best values for each city: 
+  values_per_dot = 400, # 100 -> 800
+  group = "variable"
+)
+
+grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
+
+
+p2 <- ggplot(data=grouped_df) +
+  geom_sf(data = grouped_df_base,
+          aes(text=
+                paste(
+                  paste(
+                    "Hispanic: ", round(hispanic_pct, digits=2), "%", sep=""
+                  ),
+                  paste(
+                    "White: ", round(white_pct, digits=2), "%", sep=""
+                  ),
+                  paste(
+                    "Black: ", round(black_pct, digits=2), "%", sep=""
+                  ),
+                  paste(
+                    "Asian: ", round(asian_pct, digits=2), "%", sep=""
+                  ),
+                  sep="\n"
+                ),
+              color=NAME,
+              fill=test_stat
+          )
+          #mapping = aes(fill = AREA),
+          #fill = "white",
+          #color = "grey"
+  ) +
+  geom_sf(data = city_dots2,  
+          aes(color = variable), # variable -> "red"
+          size = 0.3) + # 0.01 -> 0.3
+  
+  
+  # geom_sf_text(data = grouped_df,
+  #              mapping = aes(label=NAME)) +
+  #geom_text(aes(label=NAME), data = grouped_df) +
+  theme_void() +
+  scale_color_manual(values = c("Black" = "blue",
+                                "Asian" = "red",
+                                "White" = "green",
+                                "Hispanic" = "orange"))
+
+gg_2 <- ggplotly(p2)
+
+gg_3 <- gg_2 %>% 
+  style(
+    hoveron = "fills",
+    # override the color mapping
+    # line.color = toRGB("gray40"),
+    # don't apply these style rules to the first trace, which is the background graticule/grid
+    traces = seq.int(3, length(gg_2$x$data))
+  ) %>%
+  hide_legend()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+city_race = get("manhattan_NY_df")
