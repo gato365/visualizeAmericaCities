@@ -18,6 +18,7 @@ library(terra)
 library(r2r)
 library(stringr) 
 library(tidyverse)
+library(kableExtra)
 
 ## Set working directory
 setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
@@ -208,6 +209,11 @@ for (i in 1:length(dropDownVector2)) {
 formatted_boroughs = hashmap()
 formatted_boroughs[dropDownVector2] = borough_rda_strings
 
+## Join all the strings
+all_rda_strings = c(rda_strings, borough_rda_strings)
+## Remove vectors that have boroughs
+all_rda_strings = all_rda_strings[! all_rda_strings %in% c('new_york_NY_df')]
+
 empty_vector = c()
 ## Define UI for application
 ui <- fluidPage(
@@ -235,7 +241,26 @@ ui <- fluidPage(
     ),
     tabPanel(
       "Table",
-      "TODO after map is finished; review stuff you need on slack"
+      titlePanel("Distribution Table"),
+      sidebarLayout(
+        sidebarPanel(
+          h6("Input as a decimal (0.25 = 25%)"),
+          h6("The below inputs must sum to 1."),
+          #sliderInput("hispanic_slider", "% Hispanic: ", min=0, max=100, value=0, step=1)
+          textInput("hispanic_percent", "% Hispanic"),
+          textInput("white_percent", "% White"),
+          textInput("black_percent", "% Black"),
+          textInput("asian_percent", "% Asian"),
+          submitButton("Update", icon("Refresh"))
+        ),
+        mainPanel(
+          textOutput("hispanic_out"),
+          textOutput("white_out"),
+          textOutput("black_out"),
+          textOutput("asian_out")
+        )
+      ),
+      tableOutput("top_10_kable")
     )
   )
 )
@@ -249,7 +274,11 @@ server <- function(input, output, session) {
   toListen <- reactive({
     list(input$county,input$density,input$NYC_B)
   })
+  toListenTable <- reactive({
+    list(input$hispanic_percent, input$white_percent, input$black_percent, input$asian_percent)
+  })
   
+  ## Map Tab
   ## Watching for changes in the reactive object
   observeEvent(toListen(), {
     print(input$county)
@@ -342,6 +371,72 @@ server <- function(input, output, session) {
       gg_3
     )
   })
+  
+  ## Table Tab
+  #test_df = get("san_jose_CA_df")
+  observeEvent(toListenTable(), {
+    test_df = get("san_jose_CA_df")
+    if(input$hispanic_percent == "") {
+      dist_percent = c(0.25, 0.25, 0.25, 0.25)
+    }
+    else {
+      dist_percent = c(as.numeric(input$hispanic_percent), as.numeric(input$white_percent), 
+                       as.numeric(input$black_percent), as.numeric(input$asian_percent))
+    }
+    top_10_df = data.frame()
+    ## Loop to traverse every single tract
+    #for (i in 1:length(all_rda_strings)) {
+    #city_race = get(all_rda_strings[i])
+    ## Generate necessary columns
+    chisq_df = test_df %>% 
+      mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
+             white_count = round((total_pop * (white_pct/100)), digits=0),
+             black_count = round((total_pop * (black_pct/100)), digits=0),
+             asian_count = round((total_pop * (asian_pct/100)), digits=0))
+    chisq_df = chisq_df %>% 
+      filter(hispanic_count > 5,
+             white_count > 5,
+             black_count > 5,
+             asian_count > 5)
+    ## Drop NAs
+    chisq_df = na.omit(chisq_df)
+    ## Perform chi-squared testing
+    chisq_df = chisq_df %>% 
+      rowwise() %>% 
+      mutate(
+        test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
+        p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
+      )
+    ## Sort by descen ding p-value
+    ordered_race = chisq_df %>% 
+      group_by(NAME) %>% 
+      arrange(desc(p_val))
+    #print(ordered_race)
+    ## Only keep top 10 p-values, and subset dataframe
+    ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
+    ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
+                                  "black_count", "asian_count", "p_val", "test_stat")]
+    ## Keep top 10
+    top_10_df = rbind(top_10_df, ordered_race)
+    top_10_df = top_10_df[order(top_10_df$p_val),]
+    print(top_10_df)
+    #top_10_df = top_10_df[!duplicated(top_10_df),]
+    top_10_df = head(top_10_df, 10)
+    #print(top_10_df)
+    #}
+    output$top_10_kable <- function() {
+      top_10_df  %>% 
+        kable("html")
+    }
+  })
+  
+  
+  ## OUTPUTS
+  output$hispanic_out <- renderText(input$hispanic_percent)
+  output$white_out <- renderText(input$white_percent)
+  output$black_out <- renderText(input$black_percent)
+  output$asian_out <- renderText(input$asian_percent)
+  
   ## Exit gracefully
   session$onSessionEnded(function() {
     stopApp()

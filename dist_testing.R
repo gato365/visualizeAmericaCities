@@ -224,22 +224,27 @@ for (i in 1:length(all_rda_strings)) {
   print(all_rda_strings[i])
   city_race = get("philadelphia_PA_df")
   ## Generate necessary columns
-  city_race = city_race %>% 
+  chisq_df = city_race %>% 
     mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
            white_count = round((total_pop * (white_pct/100)), digits=0),
            black_count = round((total_pop * (black_pct/100)), digits=0),
            asian_count = round((total_pop * (asian_pct/100)), digits=0))
+  chisq_df = chisq_df %>% 
+    filter(hispanic_count > 5,
+           white_count > 5,
+           black_count > 5,
+           asian_count > 5)
   ## Drop NAs
-  city_race = na.omit(city_race)
+  chisq_df = na.omit(chisq_df)
   ## Perform chi-squared testing
-  city_race = city_race %>% 
+  chisq_df = chisq_df %>% 
     rowwise() %>% 
     mutate(
       test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
       p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
     )
   ## Sort by descen ding p-value
-  ordered_race = city_race %>% 
+  ordered_race = chisq_df %>% 
     group_by(NAME) %>% 
     arrange(desc(p_val))
   #print(ordered_race)
