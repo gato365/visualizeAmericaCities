@@ -190,7 +190,7 @@ load(file="counties_dataframes.rda")
 load(file="boroughs_dataframes.rda")
 
 dist_race = "White"
-dist_percent = c(0.35, 0.59, 0.01, 0.05)
+dist_percent = c(0.05, 0.55, 0.01, 0.39)
 dist_sample_size = 1000
 
 # test_race = get("san_jose_CA_df")
@@ -222,7 +222,7 @@ top_10_df = data.frame()
 for (i in 1:length(all_rda_strings)) {
   #city_race = get(all_rda_strings[i])
   print(all_rda_strings[i])
-  city_race = get("philadelphia_PA_df")
+  city_race = get("san_jose_CA_df")
   ## Generate necessary columns
   chisq_df = city_race %>% 
     mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
@@ -243,30 +243,25 @@ for (i in 1:length(all_rda_strings)) {
       test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
       p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
     )
-  ## Sort by descen ding p-value
+  ## Sort by test_stat
   ordered_race = chisq_df %>% 
     group_by(NAME) %>% 
-    arrange(desc(p_val))
+    arrange(test_stat)
   #print(ordered_race)
-  ## Only keep top 10 p-values, and subset dataframe
+  ## Only keep top 10 test_stat values, and subset dataframe
   ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
   ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
                                 "black_count", "asian_count", "p_val", "test_stat")]
   ## Keep top 10
   top_10_df = rbind(top_10_df, ordered_race)
-  top_10_df = top_10_df[order(top_10_df$p_val),]
+  top_10_df = top_10_df[order(top_10_df$test_stat),]
   print(top_10_df)
   #top_10_df = top_10_df[!duplicated(top_10_df),]
   top_10_df = head(top_10_df, 10)
   #print(top_10_df)
 }
-
-
-## IDEA FOR HOW ALGORITHM WORKS
-## vectorized, perform chi squared test on each row
-## get 10 smallest p values? 
-## add to the solution dataframe; if the length of the solution dataframe > 10
-##    remove the largest p-value
+## Drop geometry column
+top_10_df = st_drop_geometry(top_10_df)
 
 grouped_df = city_race
 grouped_df = grouped_df %>% 

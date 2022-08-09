@@ -385,48 +385,53 @@ server <- function(input, output, session) {
     }
     top_10_df = data.frame()
     ## Loop to traverse every single tract
-    #for (i in 1:length(all_rda_strings)) {
-    #city_race = get(all_rda_strings[i])
-    ## Generate necessary columns
-    chisq_df = test_df %>% 
-      mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
-             white_count = round((total_pop * (white_pct/100)), digits=0),
-             black_count = round((total_pop * (black_pct/100)), digits=0),
-             asian_count = round((total_pop * (asian_pct/100)), digits=0))
-    chisq_df = chisq_df %>% 
-      filter(hispanic_count > 5,
-             white_count > 5,
-             black_count > 5,
-             asian_count > 5)
-    ## Drop NAs
-    chisq_df = na.omit(chisq_df)
-    ## Perform chi-squared testing
-    chisq_df = chisq_df %>% 
-      rowwise() %>% 
-      mutate(
-        test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
-        p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
-      )
-    ## Sort by descen ding p-value
-    ordered_race = chisq_df %>% 
-      group_by(NAME) %>% 
-      arrange(desc(p_val))
-    #print(ordered_race)
-    ## Only keep top 10 p-values, and subset dataframe
-    ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
-    ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
-                                  "black_count", "asian_count", "p_val", "test_stat")]
-    ## Keep top 10
-    top_10_df = rbind(top_10_df, ordered_race)
-    top_10_df = top_10_df[order(top_10_df$p_val),]
-    print(top_10_df)
-    #top_10_df = top_10_df[!duplicated(top_10_df),]
-    top_10_df = head(top_10_df, 10)
+    for (i in 1:length(all_rda_strings)) {
+      city_race = get(all_rda_strings[i])
+      ## Generate necessary columns
+      chisq_df = city_race %>% 
+        mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
+               white_count = round((total_pop * (white_pct/100)), digits=0),
+               black_count = round((total_pop * (black_pct/100)), digits=0),
+               asian_count = round((total_pop * (asian_pct/100)), digits=0))
+      chisq_df = chisq_df %>% 
+        filter(hispanic_count > 5,
+               white_count > 5,
+               black_count > 5,
+               asian_count > 5)
+      ## Drop NAs
+      chisq_df = na.omit(chisq_df)
+      ## Perform chi-squared testing
+      chisq_df = chisq_df %>% 
+        rowwise() %>% 
+        mutate(
+          test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
+          p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
+        )
+      ## Sort by test_stat
+      ordered_race = chisq_df %>% 
+        group_by(NAME) %>% 
+        arrange(test_stat)
+      #print(ordered_race)
+      ## Only keep top 10 test_stat values, and subset dataframe
+      ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
+      ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
+                                    "black_count", "asian_count", "p_val", "test_stat")]
+      ## Keep top 10
+      top_10_df = rbind(top_10_df, ordered_race)
+      top_10_df = top_10_df[order(top_10_df$test_stat),]
+      #print(top_10_df)
+      #top_10_df = top_10_df[!duplicated(top_10_df),]
+      top_10_df = head(top_10_df, 10)
     #print(top_10_df)
-    #}
+    }
+    ## Drop geometry column
+    top_10_df = st_drop_geometry(top_10_df)
+    
     output$top_10_kable <- function() {
       top_10_df  %>% 
-        kable("html")
+        kable("html") %>% 
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                      font_size = 15)
     }
   })
   
