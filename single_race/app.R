@@ -12,8 +12,8 @@ library(tidyverse)
 library(kableExtra)
 
 ## Set working directory
-#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-setwd("/cloud/project/visualizeAmericaCities")
+setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+#setwd("/cloud/project/visualizeAmericaCities")
 
 ###############################################
 ## Main County Mapping
