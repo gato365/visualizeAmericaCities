@@ -21,8 +21,8 @@ library(tidyverse)
 library(kableExtra)
 
 ## Set working directory
-setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-#setwd("/cloud/project/visualizeAmericaCities")
+#setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+setwd("/cloud/project/visualizeAmericaCities")
 
 ###############################################
 ## Main County Mapping
@@ -251,7 +251,7 @@ ui <- fluidPage(
           textInput("white_percent", "% White"),
           textInput("black_percent", "% Black"),
           textInput("asian_percent", "% Asian"),
-          submitButton("Update", icon("Refresh"))
+          submitButton("Update")
         ),
         mainPanel(
           textOutput("hispanic_out"),
@@ -388,6 +388,7 @@ server <- function(input, output, session) {
     for (i in 1:length(all_rda_strings)) {
       city_race = get(all_rda_strings[i])
       ## Generate necessary columns
+      print(city_race)
       chisq_df = city_race %>% 
         mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
                white_count = round((total_pop * (white_pct/100)), digits=0),
