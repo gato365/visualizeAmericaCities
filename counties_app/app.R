@@ -239,6 +239,7 @@ ui <- fluidPage(
       ## Graphing plotly
       plotlyOutput("distPlot")
     ),
+    ## Table Panel UI
     tabPanel(
       "Table",
       titlePanel("Distribution Table"),
@@ -251,22 +252,18 @@ ui <- fluidPage(
           textInput("white_percent", "% White"),
           textInput("black_percent", "% Black"),
           textInput("asian_percent", "% Asian"),
+          htmlOutput('warningText'),
+          actionButton("update", "Update")
+        ),
+        mainPanel(
           ## Drop down list for choosing a county
           selectInput("county_table", "County:",
                       dropDownVector),
-          h6("Ignore the below drop-down menu if a county other than 'New York, NY' is selected."),
           conditionalPanel("input.county_table == 'New York, NY'",
                            selectInput('NYC_B_table','Select Borough:',
                                        choices = dropDownVector2,
                                        selected = "Manhattan, NY"),
-          ), 
-          submitButton("Update")
-        ),
-        mainPanel(
-          textOutput("hispanic_out"),
-          textOutput("white_out"),
-          textOutput("black_out"),
-          textOutput("asian_out")
+          )
         )
       ),
       tableOutput("top_10_kable")
@@ -284,8 +281,7 @@ server <- function(input, output, session) {
     list(input$county,input$density,input$NYC_B)
   })
   toListenTable <- reactive({
-    list(input$hispanic_percent, input$white_percent, input$black_percent, input$asian_percent,
-         input$county_table, input$NYC_B_table)
+    list(input$county_table, input$NYC_B_table, input$update)
   })
   
   ## Map Tab
@@ -383,70 +379,80 @@ server <- function(input, output, session) {
   })
   
   ## Table Tab
+  ## Default values
+  r <- reactiveValues(hispanic_percent = 0.25, white_percent = 0.25, black_percent = 0.25, 
+                      asian_percent = 0.25)
+  ## Update values if actionButton
+  observeEvent(input$update, {
+    r$hispanic_percent = input$hispanic_percent
+    r$white_percent = input$white_percent
+    r$black_percent = input$black_percent
+    r$asian_percent = input$asian_percent
+  })
+  
   #test_df = get("san_jose_CA_df")
   observeEvent(toListenTable(), {
     test_df = get("san_jose_CA_df")
-    if(input$hispanic_percent == "") {
-      dist_percent = c(0.25, 0.25, 0.25, 0.25)
+    
+    dist_percent = c(as.numeric(r$hispanic_percent), as.numeric(r$white_percent), 
+                     as.numeric(r$black_percent), as.numeric(r$asian_percent))
+    if(sum(dist_percent) != 1) {
+      warning_text = 'Distribution does not add up to 1. Check your inputs.'
     }
     else {
-      dist_percent = c(as.numeric(input$hispanic_percent), as.numeric(input$white_percent), 
-                       as.numeric(input$black_percent), as.numeric(input$asian_percent))
+      warning_text = ''
+      top_10_df = data.frame()
+      if(input$county_table == "New York, NY") {
+        city_race <- get(formatted_boroughs[input$NYC_B_table][[1]][1])
+        #city_race <- get(formatted_counties[input$county_table][[1]][1])
+      } else {
+        city_race <- get(formatted_counties[input$county_table][[1]][1])
+      }
+      ## Generate necessary columns
+      chisq_df = city_race %>% 
+        mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
+               white_count = round((total_pop * (white_pct/100)), digits=0),
+               black_count = round((total_pop * (black_pct/100)), digits=0),
+               asian_count = round((total_pop * (asian_pct/100)), digits=0))
+      chisq_df = chisq_df %>% 
+        filter(hispanic_count > 5,
+               white_count > 5,
+               black_count > 5,
+               asian_count > 5)
+      ## Drop NAs
+      chisq_df = na.omit(chisq_df)
+      ## Perform chi-squared testing
+      chisq_df = chisq_df %>% 
+        rowwise() %>% 
+        mutate(
+          test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
+          p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
+        )
+      ## Sort by test_stat  
+      ordered_race = chisq_df %>% 
+        group_by(NAME) %>% 
+        arrange(test_stat)
+      #print(ordered_race)
+      ## Only keep top 10 test_stat values, and subset dataframe
+      ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
+      ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
+                                    "black_count", "asian_count", "p_val", "test_stat")]
+      ## Keep top 10
+      top_10_df = rbind(top_10_df, ordered_race)
+      top_10_df = top_10_df[order(top_10_df$test_stat),]
+      top_10_df = head(top_10_df, 10)
+      
+      ## Drop geometry column
+      top_10_df = st_drop_geometry(top_10_df)
+      
+      output$top_10_kable <- function() {
+        top_10_df  %>% 
+          kable("html") %>% 
+          kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                        font_size = 15)
+      }
     }
-    top_10_df = data.frame()
-    ## Loop to traverse every single tract
-    
-    if(input$county_table == "New York, NY") {
-      city_race <- get(formatted_boroughs[input$NYC_B_table][[1]][1])
-      #city_race <- get(formatted_counties[input$county_table][[1]][1])
-    } else {
-      city_race <- get(formatted_counties[input$county_table][[1]][1])
-    }
-    ## Generate necessary columns
-    chisq_df = city_race %>% 
-      mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
-             white_count = round((total_pop * (white_pct/100)), digits=0),
-             black_count = round((total_pop * (black_pct/100)), digits=0),
-             asian_count = round((total_pop * (asian_pct/100)), digits=0))
-    chisq_df = chisq_df %>% 
-      filter(hispanic_count > 5,
-             white_count > 5,
-             black_count > 5,
-             asian_count > 5)
-    ## Drop NAs
-    chisq_df = na.omit(chisq_df)
-    ## Perform chi-squared testing
-    chisq_df = chisq_df %>% 
-      rowwise() %>% 
-      mutate(
-        test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
-        p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
-      )
-    ## Sort by test_stat
-    ordered_race = chisq_df %>% 
-      group_by(NAME) %>% 
-      arrange(test_stat)
-    #print(ordered_race)
-    ## Only keep top 10 test_stat values, and subset dataframe
-    ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
-    ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
-                                  "black_count", "asian_count", "p_val", "test_stat")]
-    ## Keep top 10
-    top_10_df = rbind(top_10_df, ordered_race)
-    top_10_df = top_10_df[order(top_10_df$test_stat),]
-    #print(top_10_df)
-    #top_10_df = top_10_df[!duplicated(top_10_df),]
-    top_10_df = head(top_10_df, 10)
-
-    ## Drop geometry column
-    top_10_df = st_drop_geometry(top_10_df)
-    
-    output$top_10_kable <- function() {
-      top_10_df  %>% 
-        kable("html") %>% 
-        kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
-                      font_size = 15)
-    }
+    output$warningText = renderText(warning_text)
   })
   
   
