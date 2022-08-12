@@ -223,7 +223,7 @@ ui <- fluidPage(
   radioButtons("density", "Population per dot: ",
                c(400, 800, 1600, 3200)),
   ## Graphing plot
-  plotOutput("distPlot")
+  plotlyOutput("distPlot")
 )
 
 # Define server logic
@@ -264,21 +264,35 @@ server <- function(input, output, session) {
     city_base <- city_race[city_race$variable == input$race, ]
     
     # Map with ggplot2
-    p <- ggplot() +
-      geom_sf(data = city_base,
-              fill = "white",
-              color = "grey") +
-      geom_sf(data = city_dots,  
-              aes(color = variable), # variable -> "red"
-              size = 0.3) + # 0.01 -> 0.3
+    p2 <- ggplot(data=city_race) +
+      geom_sf(data = city_race,
+              aes(text=paste("Selected race population: ", value, sep=""), color=NAME
+              )
+      ) +
+      geom_sf(data = city_dots,
+              aes(color = variable),
+              size = 0.3) +
       theme_void() +
       scale_color_manual(values = c("Black" = "blue",
                                     "Asian" = "red",
                                     "White" = "green",
                                     "Hispanic" = "orange"))
     
-    output$distPlot <- renderPlot(
-      p
+    gg_2 <- ggplotly(p2)
+    
+    gg_3 <- gg_2 %>%
+      style(
+        hoveron = "fills",
+        # override the color mapping
+        # line.color = toRGB("gray40"),
+        # don't apply these style rules to the first trace, which is the background graticule/grid
+        traces = seq.int(3, length(gg_2$x$data))
+      ) %>%
+      hide_legend()
+    
+    
+    output$distPlot <- renderPlotly(
+      gg_3
     )
   })
 }

@@ -135,85 +135,30 @@ p <- ggplot() +
 
 plot(p)
 
-#grouped_df = city_race[1:5000,]
-# grouped_df = city_race
-# grouped_df = grouped_df %>% 
-#   group_by(NAME) %>% 
-#   mutate(total_population = sum(value)) %>% 
-#   mutate(race_percent = (value/total_population) * 100)
-# 
-# 
-# city_dots2 <- as_dot_density(
-#   grouped_df,
-#   value = "value",
-#   # Best values for each city: 
-#   values_per_dot = 400, # 100 -> 800
-#   group = "variable"
-# )
-# 
-# grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
-# 
-# p3 <- ggplot() +
-#   geom_sf(data = grouped_df_base,
-#           fill = "white",
-#           color = "grey") +
-#   geom_sf(data = city_dots2,  
-#           aes(color = variable), # variable -> "red"
-#           size = 0.3) + # 0.01 -> 0.3
-#   theme_void() +
-#   scale_color_manual(values = c("Black" = "blue",
-#                                 "Asian" = "red",
-#                                 "White" = "green",
-#                                 "Hispanic" = "orange"))
-# 
-# p2 <- ggplot(data=grouped_df) +
-#   geom_sf(data = grouped_df_base,
-#           aes(text=
-#                 paste(
-#                   paste(
-#                     "Hispanic: ", round(hispanic_pct, digits=2), "%", sep=""
-#                   ),
-#                   paste(
-#                     "White: ", round(white_pct, digits=2), "%", sep=""
-#                   ),
-#                   paste(
-#                     "Black: ", round(black_pct, digits=2), "%", sep=""
-#                   ),
-#                   paste(
-#                     "Asian: ", round(asian_pct, digits=2), "%", sep=""
-#                   ),
-#                   sep="\n"
-#                 ),
-#               color=NAME
-#           )
-#           #mapping = aes(fill = AREA),
-#           #fill = "white",
-#           #color = "grey"
-#   ) +
-#   geom_sf(data = city_dots2,  
-#           aes(color = variable), # variable -> "red"
-#           size = 0.3) + # 0.01 -> 0.3
-#   
-#   
-#   # geom_sf_text(data = grouped_df,
-#   #              mapping = aes(label=NAME)) +
-#   #geom_text(aes(label=NAME), data = grouped_df) +
-#   theme_void() +
-#   scale_color_manual(values = c("Black" = "blue",
-#                                 "Asian" = "red",
-#                                 "White" = "green",
-#                                 "Hispanic" = "orange"))
-# 
-# gg_2 <- ggplotly(p2)
-# 
-# gg_3 <- gg_2 %>% 
-#   style(
-#     hoveron = "fills",
-#     # override the color mapping
-#     # line.color = toRGB("gray40"),
-#     # don't apply these style rules to the first trace, which is the background graticule/grid
-#     traces = seq.int(3, length(gg_2$x$data))
-#   ) %>%
-#   hide_legend()
+p2 <- ggplot(data=city_race) +
+  geom_sf(data = city_race,
+          aes(text=paste("Selected race population: ", value, sep=""), color=NAME
+          )
+  ) +
+  geom_sf(data = city_dots,
+          aes(color = variable),
+          size = 0.3) +
+  theme_void() +
+  scale_color_manual(values = c("Black" = "blue",
+                                "Asian" = "red",
+                                "White" = "green",
+                                "Hispanic" = "orange"))
+
+gg_2 <- ggplotly(p2)
+
+gg_3 <- gg_2 %>%
+  style(
+    hoveron = "fills",
+    # override the color mapping
+    # line.color = toRGB("gray40"),
+    # don't apply these style rules to the first trace, which is the background graticule/grid
+    traces = seq.int(3, length(gg_2$x$data))
+  ) %>%
+  hide_legend()
 
 # summarise(total_population = sum(value))

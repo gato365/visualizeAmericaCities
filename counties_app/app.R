@@ -18,6 +18,7 @@ library(terra)
 library(r2r)
 library(stringr) 
 library(tidyverse)
+library(sf)
 library(kableExtra)
 
 ## Set working directory
@@ -130,7 +131,11 @@ bStateNameMap[vec1] = vec2
 
 ## Steps to make drop down
 ## 1. paste together county + state into a vector
+## EX: "san_francisco", "CA", -> "San Francisco, CA"
 ## COUNTIES
+
+## Start runtime testing
+start_time = Sys.time()
 dropDownVector = c()
 for (i in 1:length(countyNameMap)) {
   ## Format County
@@ -204,6 +209,10 @@ for (i in 1:length(dropDownVector2)) {
   joined_string = paste(split_string, collapse="_")
   borough_rda_strings = append(borough_rda_strings, joined_string)
 }
+
+## End runtime testing
+end_time = Sys.time()
+print(paste("FOR LOOP TIME: ", (end_time-start_time), sep = ""))
 
 ## Hash map mapping old string to new formatted string
 formatted_boroughs = hashmap()
@@ -303,6 +312,8 @@ server <- function(input, output, session) {
       city_race <- get(formatted_counties[input$county][[1]][1])
     }
     
+    ## Start runtime testing
+    start_time = Sys.time()
     ## Create new columns for more information
     grouped_df = city_race
     grouped_df = grouped_df %>% 
@@ -358,8 +369,16 @@ server <- function(input, output, session) {
                                     "Asian" = "red",
                                     "White" = "green",
                                     "Hispanic" = "orange"))
+    ## End runtime testing
+    end_time = Sys.time()
+    
+    print(paste("city_dots and ggplot time: ", (end_time-start_time), sep=""))
     ## Create ggplotly
     print("reached ggplotly")
+    
+    ## Start runtime testing
+    start_time = Sys.time()
+    
     gg_2 <- ggplotly(p2)
     ## This code below allows user to hover over tract area and get information
     print("reached gg3")
@@ -376,6 +395,10 @@ server <- function(input, output, session) {
     output$distPlot <- renderPlotly(
       gg_3
     )
+    
+    ## End runtime testing
+    end_time = Sys.time()
+    print(paste("ggplotly time: ", (end_time-start_time), sep=""))
   })
   
   ## Table Tab
