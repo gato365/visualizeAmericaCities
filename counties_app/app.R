@@ -20,6 +20,7 @@ library(stringr)
 library(tidyverse)
 library(sf)
 library(kableExtra)
+library(shinyWidgets)
 
 ## Set working directory
 setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
@@ -247,6 +248,7 @@ ui <- fluidPage(
                    c(400, 800, 1600, 3200)),
       ## Graphing plotly
       plotlyOutput("distPlot")
+      # column(4,progressBar(id = "pb4", value = 0, display_pct = T))
     ),
     ## Table Panel UI
     tabPanel(
@@ -293,10 +295,14 @@ server <- function(input, output, session) {
     list(input$county_table, input$NYC_B_table, input$update)
   })
   
-  ## Map Tab
-  ## Watching for changes in the reactive object
+
   observeEvent(toListen(), {
     print(input$county)
+    ## Create Progress Object
+    progress <- shiny::Progress$new()
+    on.exit(progress$close())
+    progress$set(message = "Making plot", value = 0)
+    progress$inc(1/4, detail = "Generating density dots")
     #if(input$county)
     ## Identify variables for mapping
     race_vars <- c(
@@ -320,7 +326,6 @@ server <- function(input, output, session) {
       group_by(NAME) %>% 
       mutate(total_population = sum(value)) %>% 
       mutate(race_percent = (value/total_population) * 100)
-    
     ## Convert data to dots
     city_dots <- as_dot_density(
       grouped_df,
@@ -329,8 +334,16 @@ server <- function(input, output, session) {
       values_per_dot = as.numeric(input$density),
       group = "variable"
     )
+    ## End runtime testing
+    end_time = Sys.time()
+    print(paste("city_dots time: ", (end_time-start_time), sep=""))
+    
+    progress$inc(1/4, detail = "Creating ggplot")
     ## Use one set of polygon geometries as a base layer
     grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
+    
+    ## Start runtime testing
+    start_time = Sys.time()
     
     ## Map with ggplot2
     print("Reached ggplot2")
@@ -371,8 +384,9 @@ server <- function(input, output, session) {
                                     "Hispanic" = "orange"))
     ## End runtime testing
     end_time = Sys.time()
+    print(paste("ggplot time: ", (end_time-start_time), sep=""))
     
-    print(paste("city_dots and ggplot time: ", (end_time-start_time), sep=""))
+    progress$inc(1/4, detail = "Creating ggplotly")
     ## Create ggplotly
     print("reached ggplotly")
     
@@ -395,10 +409,11 @@ server <- function(input, output, session) {
     output$distPlot <- renderPlotly(
       gg_3
     )
-    
     ## End runtime testing
     end_time = Sys.time()
     print(paste("ggplotly time: ", (end_time-start_time), sep=""))
+    
+    progress$inc(1/4, detail = "Rendering map")
   })
   
   ## Table Tab

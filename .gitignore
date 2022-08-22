@@ -19,3 +19,5 @@ bin-release/
 .Rproj.user
 
 counties_dataframes.rda
+
+counties_app/python_map
