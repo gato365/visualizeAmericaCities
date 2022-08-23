@@ -222,6 +222,7 @@ gg_3 <- gg_2 %>%
     # don't apply these style rules to the first trace, which is the background graticule/grid
     traces = seq.int(3, length(gg_2$x$data))
   ) %>%
-  hide_legend()
+  hide_legend() %>% 
+  hide_ax
     
   # summarise(total_population = sum(value))
