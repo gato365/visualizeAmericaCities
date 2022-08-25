@@ -193,14 +193,16 @@ p2 <- ggplot(data=grouped_df) +
                   sep="\n"
                 ),
                 color=NAME
-          )
+          ),
+          show.legend=FALSE
           #mapping = aes(fill = AREA),
           #fill = "white",
           #color = "grey"
           ) +
   geom_sf(data = city_dots2,  
          aes(color = variable), # variable -> "red"
-         size = 0.3) + # 0.01 -> 0.3
+         size = 0.3,
+         show.legend=TRUE) + # 0.01 -> 0.3
  
   
   # geom_sf_text(data = grouped_df,
@@ -222,7 +224,6 @@ gg_3 <- gg_2 %>%
     # don't apply these style rules to the first trace, which is the background graticule/grid
     traces = seq.int(3, length(gg_2$x$data))
   ) %>%
-  hide_legend() %>% 
-  hide_ax
+  layout(legend = list(title = list(text = "test")))
     
   # summarise(total_population = sum(value))

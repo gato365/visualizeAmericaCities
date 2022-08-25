@@ -263,7 +263,7 @@ for (i in 1:length(all_rda_strings)) {
 ## Drop geometry column
 top_10_df = st_drop_geometry(top_10_df)
 
-grouped_df = city_race
+grouped_df = chisq_df
 grouped_df = grouped_df %>% 
   group_by(NAME) %>% 
   mutate(total_population = sum(value)) %>% 

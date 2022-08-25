@@ -23,8 +23,8 @@ library(kableExtra)
 library(shinyWidgets)
 
 ## Set working directory
-# setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
-setwd("/cloud/project/visualizeAmericaCities")
+setwd("D:/Old Desktop/Desktop/Cal Poly/Frost SURP/visualizeAmericaCities")
+#setwd("/cloud/project/visualizeAmericaCities")
 
 ###############################################
 ## Main County Mapping
@@ -229,10 +229,13 @@ empty_vector = c()
 ui <- fluidPage(
   ## bslib theme
   theme = bs_theme(version = 5),
+  tags$style(HTML("
+                  .tabbable > .nav > li[class=active]    > a {background-color: black; color:white}
+                  ")),
   tabsetPanel(
     tabPanel(
       "County Map",
-      "An interactive county map",
+      #"An interactive county map",
       ## Main title
       titlePanel("County Map"),
       ## Drop down list for choosing a county
@@ -258,6 +261,7 @@ ui <- fluidPage(
         sidebarPanel(
           h6("Input as a decimal (0.25 = 25%)"),
           h6("The below inputs must sum to 1."),
+          h6("Default values are 0.25, 0.25, 0.25, 0.25."),
           #sliderInput("hispanic_slider", "% Hispanic: ", min=0, max=100, value=0, step=1)
           textInput("hispanic_percent", "% Hispanic"),
           textInput("white_percent", "% White"),
@@ -278,6 +282,36 @@ ui <- fluidPage(
         )
       ),
       tableOutput("top_10_kable")
+    ),
+    tabPanel(
+      "Map 2",
+      titlePanel("Map with Chi-Square Goodness of Fit"),
+      sidebarLayout(
+        sidebarPanel(
+          h6("Input as a decimal (0.25 = 25%)"),
+          h6("The below inputs must sum to 1."),
+          h6("Default values are 0.25, 0.25, 0.25, 0.25."),
+          #sliderInput("hispanic_slider", "% Hispanic: ", min=0, max=100, value=0, step=1)
+          textInput("hispanic_percent2", "% Hispanic"),
+          textInput("white_percent2", "% White"),
+          textInput("black_percent2", "% Black"),
+          textInput("asian_percent2", "% Asian"),
+          htmlOutput('warningText2'),
+          actionButton("update2", "Update")
+        ),
+        mainPanel(
+          ## Drop down list for choosing a county
+          selectInput("county_table2", "County:",
+                      dropDownVector),
+          conditionalPanel("input.county_table2 == 'New York, NY'",
+                           selectInput('NYC_B_table2','Select Borough:',
+                                       choices = dropDownVector2,
+                                       selected = "Manhattan, NY"),
+          )
+        )
+      ),
+      ## Graphing plotly
+      plotlyOutput("chiPlot")
     )
   )
 )
@@ -289,10 +323,13 @@ server <- function(input, output, session) {
   load(file="../boroughs_dataframes.rda")
   ## Create reactive object
   toListen <- reactive({
-    list(input$county,input$density,input$NYC_B)
+    list(input$county, input$density, input$NYC_B)
   })
   toListenTable <- reactive({
     list(input$county_table, input$NYC_B_table, input$update)
+  })
+  toListenChiPlot <- reactive({
+    list(input$county_table2, input$NYC_B_table2, input$update2)
   })
   
 
@@ -428,10 +465,7 @@ server <- function(input, output, session) {
     r$asian_percent = input$asian_percent
   })
   
-  #test_df = get("san_jose_CA_df")
   observeEvent(toListenTable(), {
-    test_df = get("san_jose_CA_df")
-    
     dist_percent = c(as.numeric(r$hispanic_percent), as.numeric(r$white_percent), 
                      as.numeric(r$black_percent), as.numeric(r$asian_percent))
     if(sum(dist_percent) != 1) {
@@ -493,13 +527,129 @@ server <- function(input, output, session) {
     output$warningText = renderText(warning_text)
   })
   
+  ## Chi-square distribution map tab
+  ## Default values
+  r2 <- reactiveValues(hispanic_percent2 = 0.25, white_percent2 = 0.25, black_percent2 = 0.25, 
+                      asian_percent2 = 0.25)
+  ## Update values if actionButton
+  observeEvent(input$update2, {
+    r2$hispanic_percent2 = input$hispanic_percent2
+    r2$white_percent2 = input$white_percent2
+    r2$black_percent2 = input$black_percent2
+    r2$asian_percent2 = input$asian_percent2
+  })
   
-  ## OUTPUTS
-  output$hispanic_out <- renderText(input$hispanic_percent)
-  output$white_out <- renderText(input$white_percent)
-  output$black_out <- renderText(input$black_percent)
-  output$asian_out <- renderText(input$asian_percent)
-  
+  observeEvent(toListenChiPlot(), {
+    dist_percent = c(as.numeric(r2$hispanic_percent2), as.numeric(r2$white_percent2), 
+                     as.numeric(r2$black_percent2), as.numeric(r2$asian_percent2))
+    print(sum(dist_percent))
+    print(dist_percent)
+    if(sum(dist_percent) != 1) {
+      warning_text = 'Distribution does not add up to 1. Check your inputs.'
+    }
+    else {
+      warning_text = ''
+      if(input$county_table2 == "New York, NY") {
+        city_race <- get(formatted_boroughs[input$NYC_B_table2][[1]][1])
+        #city_race <- get(formatted_counties[input$county_table][[1]][1])
+      } else {
+        city_race <- get(formatted_counties[input$county_table2][[1]][1])
+      }
+      ## Generate necessary columns
+      chisq_df = city_race %>% 
+        mutate(hispanic_count = round((total_pop * (hispanic_pct/100)), digits=0),
+               white_count = round((total_pop * (white_pct/100)), digits=0),
+               black_count = round((total_pop * (black_pct/100)), digits=0),
+               asian_count = round((total_pop * (asian_pct/100)), digits=0))
+      chisq_df = chisq_df %>% 
+        filter(hispanic_count > 5,
+               white_count > 5,
+               black_count > 5,
+               asian_count > 5)
+      ## Drop NAs
+      chisq_df = na.omit(chisq_df)
+      ## Perform chi-squared testing
+      chisq_df = chisq_df %>% 
+        rowwise() %>% 
+        mutate(
+          test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
+          p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
+        )
+    }
+    output$warningText2 = renderText(warning_text)
+
+    #if(input$county)
+    ## Identify variables for mapping
+    race_vars <- c(
+      Hispanic = "P2_002N",
+      White = "P2_005N",
+      Black = "P2_006N",
+      Asian = "P2_008N"
+    )
+    if(input$county == "New York, NY") {
+      city_race <- get(formatted_boroughs[input$NYC_B][[1]][1])
+      #city_race <- get(formatted_counties[input$county][[1]][1])
+    } else {
+      city_race <- get(formatted_counties[input$county][[1]][1])
+    }
+
+    ## Create new columns for more information
+    grouped_df = chisq_df
+    grouped_df = grouped_df %>% 
+      group_by(NAME) %>% 
+      mutate(total_population = sum(value)) %>% 
+      mutate(race_percent = (value/total_population) * 100)
+    ## Use one set of polygon geometries as a base layer
+    grouped_df_base <- grouped_df[grouped_df$variable == "Hispanic", ]
+    
+    ## Map with ggplot2
+    p2 <- ggplot(data=grouped_df) +
+      geom_sf(data = grouped_df_base,
+              aes(text=
+                    paste(
+                      paste(
+                        "Total Population: ", total_pop, sep=""
+                      ),
+                      paste(
+                        "Hispanic: ", round(hispanic_pct, digits=2), "%", sep=""
+                      ),
+                      paste(
+                        "White: ", round(white_pct, digits=2), "%", sep=""
+                      ),
+                      paste(
+                        "Black: ", round(black_pct, digits=2), "%", sep=""
+                      ),
+                      paste(
+                        "Asian: ", round(asian_pct, digits=2), "%", sep=""
+                      ),
+                      sep="\n"
+                    ),
+                  color=NAME,
+                  fill=test_stat
+              )
+              #mapping = aes(fill = AREA),
+              #fill = "white",
+              #color = "grey"
+      ) +
+      theme_void()
+
+    ## Create ggplotly
+    gg_2 <- ggplotly(p2)
+    ## This code below allows user to hover over tract area and get information
+    gg_3 <- gg_2 %>% 
+      style(
+        hoveron = "fills",
+        # override the color mapping
+        line.color = toRGB("gray40"),
+        # don't apply these style rules to the first trace, which is the background graticule/grid
+        traces = seq.int(3, length(gg_2$x$data))
+      ) %>%
+      hide_legend()
+    output$chiPlot <- renderPlotly(
+      gg_3
+    )
+
+  })
   ## Exit gracefully
   session$onSessionEnded(function() {
     stopApp()
