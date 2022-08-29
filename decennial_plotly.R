@@ -193,8 +193,8 @@ p2 <- ggplot(data=grouped_df) +
                   sep="\n"
                 ),
                 color=NAME
-          ),
-          show.legend=FALSE
+          )
+          #show.legend=FALSE
           #mapping = aes(fill = AREA),
           #fill = "white",
           #color = "grey"
@@ -224,6 +224,6 @@ gg_3 <- gg_2 %>%
     # don't apply these style rules to the first trace, which is the background graticule/grid
     traces = seq.int(3, length(gg_2$x$data))
   ) %>%
-  layout(legend = list(title = list(text = "test")))
+  layout(legend=list(orientation = "v",x = 1, y = 0.5))
     
   # summarise(total_population = sum(value))

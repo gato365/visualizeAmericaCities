@@ -540,6 +540,8 @@ server <- function(input, output, session) {
   })
   
   observeEvent(toListenChiPlot(), {
+    top_10_df = data.frame()
+    bottom_10_df = data.frame()
     dist_percent = c(as.numeric(r2$hispanic_percent2), as.numeric(r2$white_percent2), 
                      as.numeric(r2$black_percent2), as.numeric(r2$asian_percent2))
     print(sum(dist_percent))
@@ -575,6 +577,45 @@ server <- function(input, output, session) {
           test_stat = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$statistic,
           p_val = chisq.test(c(hispanic_count, white_count, black_count, asian_count), p=dist_percent)$p.value
         )
+      ## Sort by test_stat  
+      ordered_race = chisq_df %>% 
+        group_by(NAME) %>% 
+        arrange(test_stat)
+      #print(ordered_race)
+      ## Only keep top 10 test_stat values, and subset dataframe
+      ordered_race = head(ordered_race[!duplicated(ordered_race$NAME),], 10)
+      ordered_race = ordered_race[c("NAME", "total_pop", "hispanic_count", "white_count",
+                                    "black_count", "asian_count", "p_val", "test_stat")]
+      ## Keep top 10
+      top_10_df = rbind(top_10_df, ordered_race)
+      top_10_df = top_10_df[order(top_10_df$test_stat),]
+      top_10_df = head(top_10_df, 10) 
+      
+      ## Drop geometry column
+      top_10_df = st_drop_geometry(top_10_df)
+      
+      ## Sort by test_stat 
+      bottom_10_df = data.frame()
+      ordered_race_reversed = chisq_df %>% 
+        group_by(NAME) %>% 
+        arrange(test_stat)
+      #print(ordered_race)
+      ## Only keep bottom 10 test_stat values, and subset dataframe
+      ordered_race_reversed = tail(ordered_race_reversed[!duplicated(ordered_race_reversed$NAME),], 10)
+      ordered_race_reversed = ordered_race_reversed[c("NAME", "total_pop", "hispanic_count", "white_count",
+                                                      "black_count", "asian_count", "p_val", "test_stat")]
+      ## Keep bottom 10
+      bottom_10_df = rbind(bottom_10_df, ordered_race_reversed)
+      bottom_10_df = bottom_10_df[order(bottom_10_df$test_stat),]
+      bottom_10_df = head(bottom_10_df, 10)
+      
+      ## Drop geometry column
+      bottom_10_df = st_drop_geometry(bottom_10_df)
+      
+      chisq_df = chisq_df %>% 
+        mutate(fillColor = case_when(NAME %in% as.vector(bottom_10_df$NAME) ~ "red",
+                                     NAME %in% as.vector(top_10_df$NAME) ~ "green",
+                                     TRUE ~ "white"))
     }
     output$warningText2 = renderText(warning_text)
 
@@ -625,11 +666,14 @@ server <- function(input, output, session) {
                       sep="\n"
                     ),
                   color=NAME,
-                  fill=test_stat
+                  fill=fillColor
               )
               #mapping = aes(fill = AREA),
               #fill = "white",
               #color = "grey"
+      ) +
+      scale_fill_manual(
+        values = c('green' = 'green', 'red' = 'red', 'white' = 'white')
       ) +
       theme_void()
 
