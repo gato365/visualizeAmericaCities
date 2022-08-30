@@ -54,3 +54,17 @@
 - Chi-Square Goodness of Fit
 - Chi-Square Test of Homogeneity
 
+# 3. Summer 2022 Recap
+
+## 3a. Completed Tasks:
+ - R Shiny webapp
+ - Interactive map of demographics for the top-50 most populated counties in the United States
+ - Interactive map of demographics where user can select one race to display
+ - Chi-Square goodness of fit table
+ - Interactive map of top-10 and bottom-10 counties corresponding to a distribution
+
+## 3b. Future Tasks:
+ - Speed up the runtime of ggplotly.
+   - Could consider doing this task in Python, but data would need to be saved in a different way.
+ - UI improvements could be made to the R Shiny webapp
+ - Instead of only having maps for the top-50 counties, maybe find a way to map the entire continental US

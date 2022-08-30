@@ -235,23 +235,29 @@ ui <- fluidPage(
   tabsetPanel(
     tabPanel(
       "County Map",
-      #"An interactive county map",
-      ## Main title
-      titlePanel("County Map"),
-      ## Drop down list for choosing a county
-      selectInput("county", "County:",
-                  dropDownVector),
-      conditionalPanel("input.county == 'New York, NY'",
-                       selectInput('NYC_B','Select Borough:',
-                                   choices = dropDownVector2,
-                                   selected = "Manhattan, NY"),
-      ), 
-      ## Radio buttons for choosing population density per dot
-      radioButtons("density", "Population per dot: ",
-                   c(400, 800, 1600, 3200)),
+      sidebarLayout(
+        sidebarPanel(
+          ## Drop down list for choosing a county
+          selectInput("county", "County:",
+                      dropDownVector),
+          conditionalPanel("input.county == 'New York, NY'",
+                           selectInput('NYC_B','Select Borough:',
+                                       choices = dropDownVector2,
+                                       selected = "Manhattan, NY"),
+          ), 
+          ## Radio buttons for choosing population density per dot
+          radioButtons("density", "Population per dot: ",
+                       c(400, 800, 1600, 3200)),
+          # ## Graphing plotly
+          # plotlyOutput("distPlot")
+          # column(4,progressBar(id = "pb4", value = 0, display_pct = T))
+        ),
+        mainPanel(
+          textOutput("testText")
+        )
+      ),
       ## Graphing plotly
       plotlyOutput("distPlot")
-      # column(4,progressBar(id = "pb4", value = 0, display_pct = T))
     ),
     ## Table Panel UI
     tabPanel(
@@ -451,6 +457,9 @@ server <- function(input, output, session) {
     print(paste("ggplotly time: ", (end_time-start_time), sep=""))
     
     progress$inc(1/4, detail = "Rendering map")
+  })
+  output$testText = renderText({
+    "Hello World"
   })
   
   ## Table Tab
