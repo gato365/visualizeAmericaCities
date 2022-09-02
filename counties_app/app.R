@@ -313,7 +313,8 @@ ui <- fluidPage(
                            selectInput('NYC_B_table2','Select Borough:',
                                        choices = dropDownVector2,
                                        selected = "Manhattan, NY"),
-          )
+          ),
+          htmlOutput('map2_legend')
         )
       ),
       ## Graphing plotly
@@ -389,7 +390,7 @@ server <- function(input, output, session) {
     start_time = Sys.time()
     
     ## Map with ggplot2
-    print("Reached ggplot2")
+    #print("Reached ggplot2")
     p2 <- ggplot(data=grouped_df) +
       geom_sf(data = grouped_df_base,
               aes(text=
@@ -431,14 +432,14 @@ server <- function(input, output, session) {
     
     progress$inc(1/4, detail = "Creating ggplotly")
     ## Create ggplotly
-    print("reached ggplotly")
+    #print("reached ggplotly")
     
     ## Start runtime testing
     start_time = Sys.time()
     
     gg_2 <- ggplotly(p2)
     ## This code below allows user to hover over tract area and get information
-    print("reached gg3")
+    #print("reached gg3")
     gg_3 <- gg_2 %>% 
       style(
         hoveron = "fills",
@@ -448,7 +449,7 @@ server <- function(input, output, session) {
         traces = seq.int(3, length(gg_2$x$data))
       ) %>%
       hide_legend()
-    print("reached render plotly")
+    #print("reached render plotly")
     output$distPlot <- renderPlotly(
       gg_3
     )
@@ -537,6 +538,11 @@ server <- function(input, output, session) {
   })
   
   ## Chi-square distribution map tab
+  output$map2_legend = renderUI({
+    str1 = "Green = most similar to distribution"
+    str2 = "Red = least similar to distribution"
+    HTML(paste(str1, str2, sep="<br/>"))
+  })
   ## Default values
   r2 <- reactiveValues(hispanic_percent2 = 0.25, white_percent2 = 0.25, black_percent2 = 0.25, 
                       asian_percent2 = 0.25)
