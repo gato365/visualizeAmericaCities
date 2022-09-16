@@ -56,7 +56,7 @@
 
 # 3. Summer 2022 Recap
 
-## 3a. Completed Tasks:
+## 3a. Completed Tasks Summary:
  - R Shiny webapp
  - Interactive map of demographics for the top-50 most populated counties in the United States
  - Interactive map of demographics where user can select one race to display
@@ -68,3 +68,39 @@
    - Could consider doing this task in Python, but data would need to be saved in a different way.
  - UI improvements could be made to the R Shiny webapp
  - Instead of only having maps for the top-50 counties, maybe find a way to map the entire continental US
+
+# 4. Completed Tasks Details
+
+## 4a. Obtaining and Saving Data
+  1. Read in necessary codes from borough_state_data.xlsx and county_state_data.xlsx (the ANSI and FIPS codes)
+  2. For each county:
+    - Call get_decennial from the tidycensus package, inputting the ANSI and FIPS codes as arguments
+    - Remove rows with empty simple feature objects (https://r-spatial.github.io/sf/articles/sf1.html)
+    - Group by county name, calculate % of race breakdown
+    - Dynamically construct the dataframe name, assign it to the global environment, and add its name to a vector
+  3. Save everything in the above vector to an RDA file
+  4. Do steps 2 and 3 for boroughs
+  
+
+
+# 5. File Descriptions
+
+## 5a. R Script Files:
+  - decennial_code.R: Not a useful R script
+  - decennial_plotly.R: Script for testing plots outside of R Shiny
+  - display_one_race.R: Script for testing the map that only displays one chosen race
+  - dist_testing.R: Script for testing the table
+  - gen_county_dfs.R: Script for generating counties_dataframes.rda and boroughs_dataframes.rda
+  - plotly_test.R: Not a useful R script
+  - save_one_file.R: Not a useful R script
+
+## 5b. R Shiny Folders
+  - acsApp: Not useful
+  - counties_app: Main app
+  - dynamic_app: App for testing dynamic drop-down menus
+  - single_race: App for displaying one chosen race
+  - test_app: App for testing a progress bar feature
+
+## 5c. Other Files
+  - borough_state_data.xlsx: Excel sheet for ANSI and FIPS codes for boroughs
+  - county_state_data.xlsx: Excel sheet for ANSI and FIPS codes for counties

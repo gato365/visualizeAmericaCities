@@ -19,5 +19,8 @@ bin-release/
 .Rproj.user
 
 counties_dataframes.rda
-
+boroughs_dataframes.rda
 counties_app/python_map
+sample_plotly.R
+top_cities.R
+test_data.rds

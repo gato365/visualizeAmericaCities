@@ -459,9 +459,9 @@ server <- function(input, output, session) {
     
     progress$inc(1/4, detail = "Rendering map")
   })
-  output$testText = renderText({
-    "Hello World"
-  })
+  # output$testText = renderText({
+  #   "Hello World"
+  # })
   
   ## Table Tab
   ## Default values

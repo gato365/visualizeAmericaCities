@@ -137,7 +137,6 @@ for (i in 1:length(countyNameMap)) {
     year = 2020
   )
   city_race = city_race[!st_is_empty(city_race$geometry),]
-  city_race = city_race[!st_is_empty(city_race$geometry),]
   city_race = city_race %>% 
     group_by(NAME) %>% 
     mutate(total_pop = sum(value)) %>% 
