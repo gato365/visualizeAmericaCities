@@ -73,11 +73,11 @@
 
 ## 4a. Obtaining and Saving Data
   1. Read in necessary codes from borough_state_data.xlsx and county_state_data.xlsx (the ANSI and FIPS codes)
-  2. For each county:
-    a. Call get_decennial from the tidycensus package, inputting the ANSI and FIPS codes as arguments
-    b. Remove rows with empty simple feature objects (https://r-spatial.github.io/sf/articles/sf1.html)
-    c. Group by county name, calculate % of race breakdown
-    d. Dynamically construct the dataframe name, assign it to the global environment, and add its name to a vector
+  2. For each county: <br />
+    a. Call get_decennial from the tidycensus package, inputting the ANSI and FIPS codes as arguments <br />
+    b. Remove rows with empty simple feature objects (https://r-spatial.github.io/sf/articles/sf1.html) <br />
+    c. Group by county name, calculate % of race breakdown <br />
+    d. Dynamically construct the dataframe name, assign it to the global environment, and add its name to a vector <br />
   3. Save everything in the above vector to an RDA file
   4. Do steps 2 and 3 for boroughs
 
